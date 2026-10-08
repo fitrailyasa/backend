@@ -104,7 +104,7 @@ services:
     <<: *db-wait
     build: ./flask
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       HOST: 0.0.0.0
       PORT: 5000
