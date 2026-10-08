@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:backend_starter;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: true
+    locations: classpath:db/test-migration
+  test:
+    database:
+      replace: none
+
+app:
+  seed: false
+  bcrypt-rounds: 4
+  jwt:
+    secret: test-only-jwt-secret-key-32bytes!!
+    access-secret: ""
+    refresh-secret: ""
+    expires-in: 3600
+    refresh-expires-in: 604800
+  rate-limit:
+    window-ms: 900000
+    max: 1000
+
+logging:
+  level:
+    root: warn

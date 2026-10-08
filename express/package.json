@@ -1,0 +1,45 @@
+{
+  "name": "backend-starter-express",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-quality Express 5 + Sequelize 6 backend starter implementing the shared API contract in _SPEC.md",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:sync": "node src/scripts/sync.js",
+    "db:reset": "node src/scripts/sync.js --force",
+    "seed": "node src/seed.js",
+    "test": "node --test --test-concurrency=1",
+    "test:watch": "node --test --watch"
+  },
+  "keywords": [
+    "express",
+    "sequelize",
+    "mysql",
+    "starter",
+    "api"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "mysql2": "^3.14.3",
+    "sequelize": "^6.37.7",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4"
+  }
+}

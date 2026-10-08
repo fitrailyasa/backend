@@ -1,0 +1,7 @@
+Flask-Migrate revisions for the `backend_starter` MySQL schema.
+
+Apply them with:
+
+```
+flask --app wsgi db upgrade
+```

@@ -1,0 +1,63 @@
+server:
+  port: ${PORT:8080}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+    whitelabel:
+      enabled: false
+
+spring:
+  application:
+    name: backend-starter-spring
+  mvc:
+    problemdetails:
+      enabled: false
+  web:
+    resources:
+      add-mappings: false
+  datasource:
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:backend_starter}?useUnicode=true&characterEncoding=utf8&connectionCollation=utf8mb4_unicode_ci&serverTimezone=UTC&allowPublicKeyRetrieval=true&useSSL=false
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # Other starter kits already create backend_starter. Baseline instead of failing
+    # when those tables exist and flyway_schema_history does not.
+    baseline-on-migrate: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  seed: ${APP_SEED:false}
+  cors-origins: ${CORS_ORIGIN:*}
+  bcrypt-rounds: ${BCRYPT_ROUNDS:10}
+  jwt:
+    secret: ${JWT_SECRET:change-me-to-a-secret-at-least-32-chars}
+    access-secret: ${JWT_ACCESS_SECRET:}
+    refresh-secret: ${JWT_REFRESH_SECRET:}
+    expires-in: ${JWT_EXPIRES_IN:3600}
+    refresh-expires-in: ${JWT_REFRESH_EXPIRES_IN:604800}
+    issuer: ${JWT_ISSUER:backend-starter}
+    audience: ${JWT_AUDIENCE:backend-starter-clients}
+  rate-limit:
+    window-ms: ${RATE_LIMIT_WINDOW_MS:900000}
+    max: ${RATE_LIMIT_MAX:100}

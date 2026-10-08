@@ -1,0 +1,8 @@
+tmp
+log
+storage
+.git
+.env
+vendor/bundle
+*.sqlite
+*.sqlite3

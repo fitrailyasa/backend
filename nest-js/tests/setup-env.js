@@ -1,0 +1,10 @@
+process.env.NODE_ENV = 'test';
+process.env.DB_DIALECT = 'sqlite';
+process.env.DB_STORAGE = ':memory:';
+process.env.DB_SYNCHRONIZE = 'true';
+process.env.DB_LOGGING = 'false';
+process.env.DB_SEED = 'false';
+process.env.JWT_SECRET = 'test-secret-key-that-is-long-enough-1234567890';
+process.env.JWT_EXPIRES_IN = '3600';
+process.env.BCRYPT_SALT_ROUNDS = '4';
+process.env.CORS_ORIGIN = '*';
