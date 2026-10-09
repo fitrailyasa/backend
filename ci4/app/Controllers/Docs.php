@@ -18,9 +18,9 @@ class Docs extends BaseController
 </head>
 <body>
   <div id="swagger-ui"></div>
-  <script src="/swagger-ui/swagger-ui-bundle.js"></script>
-  <script src="/swagger-ui/swagger-ui-standalone-preset.js"></script>
-  <script>
+  <script data-cfasync="false" src="/swagger-ui/swagger-ui-bundle.js"></script>
+  <script data-cfasync="false" src="/swagger-ui/swagger-ui-standalone-preset.js"></script>
+  <script data-cfasync="false">
     window.ui = SwaggerUIBundle({
       url: "/api/v1/docs.json",
       dom_id: "#swagger-ui",
