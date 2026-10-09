@@ -10,6 +10,7 @@ $routes->get('swagger-ui/(:segment)', 'Docs::asset/$1');
 
 $routes->group('api/v1', static function ($routes): void {
     $routes->get('docs', 'Docs::ui');
+    $routes->get('docs/index.html', 'Docs::ui');
     $routes->get('docs.json', 'Docs::spec');
     $routes->get('/', 'Api::apiIndex');
     $routes->get('health', 'Api::health');
