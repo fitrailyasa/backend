@@ -32,9 +32,13 @@ router.get('/docs.json', (req, res) => {
   res.status(200).json(swaggerDocument);
 });
 
-router.get('/docs', (req, res) => {
+function sendSwagger(_req, res) {
   res.status(200).type('html').send(swaggerHtml);
-});
+}
+
+router.get('/docs', sendSwagger);
+// The stock Swagger file points at petstore.swagger.io. Serve the local UI instead.
+router.get('/docs/index.html', sendSwagger);
 
 router.use('/docs', ...swaggerUi.serve);
 

@@ -44,6 +44,15 @@ describe('Health & docs', () => {
       assert.match(response.text, /<div id="swagger-ui">/);
       assert.match(response.text, new RegExp(`${PREFIX}/docs/swagger-ui-bundle\\.js`));
       assert.match(response.text, new RegExp(`${PREFIX}/docs/swagger-ui-init\\.js`));
+      assert.equal(response.text.includes('petstore.swagger.io'), false);
+    });
+
+    it('does not serve the stock Petstore page at index.html', async () => {
+      const response = await request.get(`${PREFIX}/docs/index.html`);
+
+      assert.equal(response.status, 200);
+      assert.match(response.text, new RegExp(`${PREFIX}/docs/swagger-ui-init\\.js`));
+      assert.equal(response.text.includes('petstore.swagger.io'), false);
     });
 
     it('serves the swagger-ui assets referenced by the page', async () => {
