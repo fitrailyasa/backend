@@ -16,6 +16,21 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
+        $errors = [];
+        foreach (['category_id', 'tag_id'] as $key) {
+            $value = $request->query($key);
+            if ($value !== null && $value !== '' && (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 1)) {
+                $errors[$key] = [$key . ' must be a positive integer.'];
+            }
+        }
+        foreach (['min_price' => 'min_price must be a number greater than or equal to 0.', 'max_price' => 'max_price must be a number greater than or equal to 0.'] as $key => $message) {
+            $value = $request->query($key);
+            if ($value !== null && $value !== '' && (!is_numeric($value) || (float) $value < 0)) {
+                $errors[$key] = [$message];
+            }
+        }
+        if ($errors) return $this->fail(422, 'Validation failed', $errors);
+
         $query = Product::query();
         if ($request->filled('category_id')) $query->where('category_id', $request->query('category_id'));
         if ($request->filled('min_price')) $query->where('price', '>=', $request->query('min_price'));
@@ -39,11 +54,13 @@ class ProductController extends Controller
             'Products retrieved',
             ['id', 'created_at', 'updated_at', 'category_id', 'name', 'slug', 'description', 'price', 'stock'],
             fn (Product $product) => $this->present($product, $request),
+            ['category', 'tags'],
         );
     }
 
     public function show(Request $request, int $id)
     {
+        if ($failure = $this->guardQuery($request, [], ['category', 'tags'], false)) return $failure;
         $product = Product::query()->find($id);
         if (!$product) return $this->fail(404, 'Product not found');
         return $this->ok('Product retrieved', $this->present($product, $request));
@@ -51,7 +68,7 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), $this->rules(true));
+        $validator = Validator::make($request->all(), $this->rules(true), $this->productMessages());
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['category_id', 'name', 'slug', 'description', 'price', 'stock']);
@@ -70,7 +87,7 @@ class ProductController extends Controller
     {
         $product = Product::query()->find($id);
         if (!$product) return $this->fail(404, 'Product not found');
-        $validator = Validator::make($request->all(), $this->rules(false));
+        $validator = Validator::make($request->all(), $this->rules(false), $this->productMessages());
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['category_id', 'name', 'slug', 'description', 'price', 'stock']);
@@ -104,13 +121,31 @@ class ProductController extends Controller
         $required = $creating ? 'required' : 'sometimes';
         return [
             'category_id' => [$required, 'integer', 'exists:categories,id'],
-            'name' => [$required, 'string', 'max:150'],
-            'slug' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'name' => [$required, 'string', 'min:2', 'max:150'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:180', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'description' => ['sometimes', 'nullable', 'string'],
             'price' => [$required, 'numeric', 'min:0'],
             'stock' => ['sometimes', 'integer', 'min:0'],
             'tag_ids' => ['sometimes', 'array'],
             'tag_ids.*' => ['integer', 'exists:tags,id'],
+        ];
+    }
+
+    private function productMessages(): array
+    {
+        return [
+            'category_id.required' => 'category_id is required.',
+            'category_id.exists' => 'The selected category_id is invalid.',
+            'name.required' => 'Name is required.',
+            'name.min' => 'Name must be between 2 and 150 characters.',
+            'name.max' => 'Name must be between 2 and 150 characters.',
+            'slug.max' => 'Slug must be between 1 and 180 characters.',
+            'slug.regex' => 'Slug may only contain lowercase letters, numbers and single hyphens.',
+            'price.required' => 'Price is required.',
+            'price.min' => 'Price must be a number greater than or equal to 0.',
+            'stock.min' => 'Stock must be an integer greater than or equal to 0.',
+            'tag_ids.array' => 'tag_ids must be an array of tag ids.',
+            'tag_ids.*.exists' => 'The selected tag_ids field is invalid.',
         ];
     }
 

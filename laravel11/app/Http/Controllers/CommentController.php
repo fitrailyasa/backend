@@ -25,7 +25,11 @@ class CommentController extends Controller
 
     public function store(Request $request, int $productId)
     {
-        $validator = Validator::make($request->all(), ['body' => ['required', 'string']]);
+        $validator = Validator::make($request->all(), ['body' => ['required', 'string', 'min:1', 'max:2000']], [
+            'body.required' => 'Body is required.',
+            'body.min' => 'Body must be between 1 and 2000 characters.',
+            'body.max' => 'Body must be between 1 and 2000 characters.',
+        ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
         if (!Product::query()->where('id', $productId)->exists()) return $this->fail(404, 'Product not found');
 
@@ -42,7 +46,11 @@ class CommentController extends Controller
         $comment = Comment::query()->find($id);
         if (!$comment) return $this->fail(404, 'Comment not found');
         if (!$this->ownsOrAdmin($request, $comment->user_id)) return $this->fail(403, 'This action is unauthorized');
-        $validator = Validator::make($request->all(), ['body' => ['required', 'string']]);
+        $validator = Validator::make($request->all(), ['body' => ['required', 'string', 'min:1', 'max:2000']], [
+            'body.required' => 'Body is required.',
+            'body.min' => 'Body must be between 1 and 2000 characters.',
+            'body.max' => 'Body must be between 1 and 2000 characters.',
+        ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
         $comment->update(['body' => $request->input('body'), 'updated_at' => now()]);
         return $this->ok('Comment updated successfully', $this->present($comment->fresh(), $request));
@@ -62,6 +70,14 @@ class CommentController extends Controller
         $query = Comment::query();
         if ($productId !== null) $query->where('product_id', $productId);
         elseif ($request->filled('product_id')) $query->where('product_id', $request->query('product_id'));
+        $errors = [];
+        foreach (['product_id', 'user_id'] as $key) {
+            $value = $request->query($key);
+            if ($value !== null && $value !== '' && (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 1)) {
+                $errors[$key] = [$key . ' must be a positive integer.'];
+            }
+        }
+        if ($errors) return $this->fail(422, 'Validation failed', $errors);
         if ($request->filled('user_id')) $query->where('user_id', $request->query('user_id'));
         if ($request->filled('search')) $query->where('body', 'like', '%' . $request->query('search') . '%');
 
@@ -71,6 +87,7 @@ class CommentController extends Controller
             'Comments retrieved',
             ['id', 'body', 'product_id', 'user_id', 'created_at', 'updated_at'],
             fn (Comment $comment) => $this->present($comment, $request),
+            ['user'],
         );
     }
 

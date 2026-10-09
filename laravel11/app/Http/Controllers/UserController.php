@@ -30,6 +30,7 @@ class UserController extends Controller
             'Users retrieved',
             ['id', 'created_at', 'updated_at', 'name', 'email', 'role'],
             fn (User $user) => $user->toApi(),
+            [],
         );
     }
 
@@ -43,10 +44,10 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'max:150'],
+            'name' => ['required', 'string', 'min:2', 'max:100'],
+            'email' => ['required', 'email', 'min:3', 'max:150'],
             'role' => ['sometimes', Rule::in(['user', 'admin'])],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', 'min:8', 'max:72'],
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
@@ -66,10 +67,10 @@ class UserController extends Controller
         $user = User::query()->find($id);
         if (!$user) return $this->fail(404, 'User not found');
         $validator = Validator::make($request->all(), [
-            'name' => ['sometimes', 'string', 'max:100'],
-            'email' => ['sometimes', 'email', 'max:150'],
+            'name' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
+            'email' => ['sometimes', 'email', 'min:3', 'max:150'],
             'role' => ['sometimes', Rule::in(['user', 'admin'])],
-            'password' => ['sometimes', 'string', 'min:8'],
+            'password' => ['sometimes', 'string', 'min:8', 'max:72'],
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
@@ -115,9 +116,9 @@ class UserController extends Controller
     {
         $current = $request->attributes->get('apiUser');
         $validator = Validator::make($request->all(), [
-            'name' => ['sometimes', 'string', 'max:100'],
-            'email' => ['sometimes', 'email', 'max:150', Rule::unique('users', 'email')->ignore($current->id)],
-            'password' => ['sometimes', 'nullable', 'string', 'min:8'],
+            'name' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
+            'email' => ['sometimes', 'email', 'min:3', 'max:150', Rule::unique('users', 'email')->ignore($current->id)],
+            'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:72'],
             'password_confirmation' => ['sometimes', 'nullable', 'string', 'same:password'],
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());

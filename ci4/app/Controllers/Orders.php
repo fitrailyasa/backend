@@ -12,16 +12,24 @@ class Orders extends BaseController
     public function index()
     {
         $request = $this->request;
+        $errors = [];
+        $status = $request->getGet('status');
+        if ($status !== null && $status !== '' && !in_array($status, ['pending', 'paid', 'shipped', 'completed', 'cancelled'], true)) {
+            $errors['status'] = ['Status must be one of: pending, paid, shipped, completed, cancelled.'];
+        }
+        $this->optionalPositiveInt('user_id', $errors);
+        if ($errors) return $this->invalid($errors);
         $builder = model(OrderModel::class, false)->builder();
         $user = $this->currentUser();
         if ($user->role !== 'admin') $builder->where('user_id', $user->id);
         elseif ($request->getGet('user_id')) $builder->where('user_id', $request->getGet('user_id'));
         if ($request->getGet('status')) $builder->where('status', $request->getGet('status'));
-        return $this->paginate($builder, ['id', 'created_at', 'updated_at'], 'Orders retrieved', fn (array $row) => $this->presentOrder($row));
+        return $this->paginate($builder, ['id', 'created_at', 'updated_at'], 'Orders retrieved', fn (array $row) => $this->presentOrder($row), ['items', 'items.product', 'user']);
     }
 
     public function show(int $id)
     {
+        if ($failure = $this->guardQuery([], ['items', 'items.product', 'user'], false)) return $failure;
         $row = model(OrderModel::class, false)->find($id);
         if (!$row) return $this->fail(404, 'Order not found');
         if (!$this->ownsOrAdmin((int) $row['user_id'])) return $this->fail(403, 'This action is unauthorized');

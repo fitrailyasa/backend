@@ -14,6 +14,14 @@ class Products extends BaseController
         $request = $this->request;
         $products = model(ProductModel::class, false);
         $builder = $products->builder();
+        $errors = [];
+        $this->optionalPositiveInt('category_id', $errors);
+        $this->optionalPositiveInt('tag_id', $errors);
+        $this->optionalMinNumber('min_price', $errors, 'min_price must be a number greater than or equal to 0.');
+        $this->optionalMinNumber('max_price', $errors, 'max_price must be a number greater than or equal to 0.');
+        $tag = $request->getGet('tag');
+        if ($tag !== null && $tag !== '' && !is_string($tag)) $errors['tag'] = ['tag must be a string.'];
+        if ($errors) return $this->invalid($errors);
         if ($request->getGet('category_id') !== null) $builder->where('category_id', $request->getGet('category_id'));
         if ($request->getGet('min_price') !== null) $builder->where('price >=', $request->getGet('min_price'));
         if ($request->getGet('max_price') !== null) $builder->where('price <=', $request->getGet('max_price'));
@@ -25,11 +33,12 @@ class Products extends BaseController
             $builder->whereIn('id', $ids ?: [0]);
         }
         $this->search($builder, ['name', 'description']);
-        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'category_id', 'name', 'slug', 'description', 'price', 'stock'], 'Products retrieved', fn (array $row) => $this->presentProduct($row));
+        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'category_id', 'name', 'slug', 'description', 'price', 'stock'], 'Products retrieved', fn (array $row) => $this->presentProduct($row), ['category', 'tags']);
     }
 
     public function show(int $id)
     {
+        if ($failure = $this->guardQuery([], ['category', 'tags'], false)) return $failure;
         $row = model(ProductModel::class, false)->find($id);
         if (!$row) return $this->fail(404, 'Product not found');
         return $this->respond('Product retrieved', $this->presentProduct($row));
@@ -98,10 +107,12 @@ class Products extends BaseController
     private function productErrors(array $data, bool $creating): array
     {
         $required = $creating ? 'required|' : 'permit_empty|';
+        $name = $this->textRule($creating, 2, 150, 'Name');
+        if (!$creating) $name['rules'] = 'permit_empty|string|min_length[2]|max_length[150]';
         $errors = $this->validatePayload($data, [
             'category_id' => $required . 'is_natural_no_zero',
-            'name' => $required . 'string|max_length[150]',
-            'slug' => 'permit_empty|string|max_length[180]',
+            'name' => $name,
+            'slug' => $this->slugRule(180),
             'description' => 'permit_empty|string',
             'price' => $required . 'decimal|greater_than_equal_to[0]',
             'stock' => 'permit_empty|integer|greater_than_equal_to[0]',

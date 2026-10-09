@@ -10,7 +10,7 @@ class Tags extends BaseController
     {
         $builder = model(TagModel::class, false)->builder();
         $this->search($builder, ['name']);
-        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'name', 'slug'], 'Tags retrieved', fn (array $row) => $this->present($row));
+        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'name', 'slug'], 'Tags retrieved', fn (array $row) => $this->present($row), []);
     }
 
     public function show(int $id)
@@ -25,8 +25,8 @@ class Tags extends BaseController
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
-            'name' => 'required|string|max_length[60]',
-            'slug' => 'permit_empty|string|max_length[80]',
+            'name' => $this->textRule(true, 2, 60, 'Name'),
+            'slug' => $this->slugRule(80),
         ]);
         if ($errors) return $this->invalid($errors);
         $values = array_intersect_key($data, array_flip(['name', 'slug']));
@@ -53,8 +53,8 @@ class Tags extends BaseController
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
-            'name' => 'permit_empty|string|max_length[60]',
-            'slug' => 'permit_empty|string|max_length[80]',
+            'name' => $this->textRule(false, 2, 60, 'Name'),
+            'slug' => $this->slugRule(80),
         ]);
         if ($errors) return $this->invalid($errors);
         $values = array_intersect_key($data, array_flip(['name', 'slug']));

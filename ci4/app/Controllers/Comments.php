@@ -23,7 +23,7 @@ class Comments extends BaseController
     {
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
-        $errors = $this->validatePayload($data, ['body' => 'required|string']);
+        $errors = $this->validatePayload($data, ['body' => $this->textRule(true, 1, 2000, 'Body')]);
         if ($errors) return $this->invalid($errors);
         if (!model(ProductModel::class, false)->builder()->where('id', $productId)->countAllResults()) return $this->fail(404, 'Product not found');
         $comments = model(CommentModel::class, false);
@@ -47,7 +47,7 @@ class Comments extends BaseController
         if (!$this->ownsOrAdmin((int) $comment['user_id'])) return $this->fail(403, 'This action is unauthorized');
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
-        $errors = $this->validatePayload($data, ['body' => 'required|string']);
+        $errors = $this->validatePayload($data, ['body' => $this->textRule(true, 1, 2000, 'Body')]);
         if ($errors) return $this->invalid($errors);
         $comments->update($id, ['body' => $data['body']]);
         return $this->respond('Comment updated successfully', $this->presentComment($comments->find($id)));
@@ -70,8 +70,12 @@ class Comments extends BaseController
         if ($productId !== null) $builder->where('product_id', $productId);
         elseif ($request->getGet('product_id') !== null) $builder->where('product_id', $request->getGet('product_id'));
         if ($request->getGet('user_id') !== null) $builder->where('user_id', $request->getGet('user_id'));
+        $errors = [];
+        $this->optionalPositiveInt('product_id', $errors);
+        $this->optionalPositiveInt('user_id', $errors);
+        if ($errors) return $this->invalid($errors);
         $this->search($builder, ['body']);
-        return $this->paginate($builder, ['id', 'body', 'product_id', 'user_id', 'created_at', 'updated_at'], 'Comments retrieved', fn (array $row) => $this->presentComment($row));
+        return $this->paginate($builder, ['id', 'body', 'product_id', 'user_id', 'created_at', 'updated_at'], 'Comments retrieved', fn (array $row) => $this->presentComment($row), ['user']);
     }
 
     private function presentComment(array $row): array

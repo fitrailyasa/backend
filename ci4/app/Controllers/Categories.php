@@ -11,11 +11,12 @@ class Categories extends BaseController
     {
         $builder = model(CategoryModel::class, false)->builder();
         $this->search($builder, ['name', 'description']);
-        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'name', 'slug', 'description'], 'Categories retrieved', fn (array $row) => $this->presentCategory($row));
+        return $this->paginate($builder, ['id', 'created_at', 'updated_at', 'name', 'slug', 'description'], 'Categories retrieved', fn (array $row) => $this->presentCategory($row), ['products']);
     }
 
     public function show(int $id)
     {
+        if ($failure = $this->guardQuery([], ['products'], false)) return $failure;
         $row = model(CategoryModel::class, false)->find($id);
         if (!$row) return $this->fail(404, 'Category not found');
         return $this->respond('Category retrieved', $this->presentCategory($row));
@@ -26,8 +27,8 @@ class Categories extends BaseController
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
-            'name' => 'required|string|max_length[100]',
-            'slug' => 'permit_empty|string|max_length[120]',
+            'name' => $this->textRule(true, 2, 100, 'Name'),
+            'slug' => $this->slugRule(120),
             'description' => 'permit_empty|string',
         ]);
         if ($errors) return $this->invalid($errors);
@@ -56,8 +57,8 @@ class Categories extends BaseController
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
-            'name' => 'permit_empty|string|max_length[100]',
-            'slug' => 'permit_empty|string|max_length[120]',
+            'name' => $this->textRule(false, 2, 100, 'Name'),
+            'slug' => $this->slugRule(120),
             'description' => 'permit_empty|string',
         ]);
         if ($errors) return $this->invalid($errors);

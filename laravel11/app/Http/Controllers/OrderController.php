@@ -18,6 +18,17 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
+        $errors = [];
+        $status = $request->query('status');
+        if ($status !== null && $status !== '' && !in_array($status, ['pending', 'paid', 'shipped', 'completed', 'cancelled'], true)) {
+            $errors['status'] = ['Status must be one of: pending, paid, shipped, completed, cancelled.'];
+        }
+        $userId = $request->query('user_id');
+        if ($userId !== null && $userId !== '' && (filter_var($userId, FILTER_VALIDATE_INT) === false || (int) $userId < 1)) {
+            $errors['user_id'] = ['user_id must be a positive integer.'];
+        }
+        if ($errors) return $this->fail(422, 'Validation failed', $errors);
+
         $query = Order::query();
         $user = $request->attributes->get('apiUser');
         if ($user->role !== 'admin') $query->where('user_id', $user->id);
@@ -30,11 +41,13 @@ class OrderController extends Controller
             'Orders retrieved',
             ['id', 'created_at', 'updated_at'],
             fn (Order $order) => $this->present($order, $request),
+            ['items', 'items.product', 'user'],
         );
     }
 
     public function show(Request $request, int $id)
     {
+        if ($failure = $this->guardQuery($request, [], ['items', 'items.product', 'user'], false)) return $failure;
         $order = Order::query()->find($id);
         if (!$order) return $this->fail(404, 'Order not found');
         if (!$this->ownsOrAdmin($request, $order->user_id)) return $this->fail(403, 'This action is unauthorized');
@@ -45,7 +58,7 @@ class OrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.product_id' => ['required', 'integer', 'min:1', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());

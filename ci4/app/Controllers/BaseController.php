@@ -44,8 +44,11 @@ abstract class BaseController extends Controller
         // $this->session = service('session');
     }
 
-    protected function paginate($builder, array $sortable, string $message, callable $transform)
+    protected function paginate($builder, array $sortable, string $message, callable $transform, array $allowedIncludes = [])
     {
+        if ($failure = $this->guardQuery($sortable, $allowedIncludes)) {
+            return $failure;
+        }
         $request = $this->request;
         $page = max(1, (int) ($request->getGet('page') ?? 1));
         $limit = min(100, max(1, (int) ($request->getGet('limit') ?? 10)));
@@ -102,6 +105,95 @@ abstract class BaseController extends Controller
             return ['_malformed_json' => true];
         }
         return $this->request->getJSON(true) ?? $this->request->getPost() ?? [];
+    }
+
+    protected function guardQuery(array $sortable, array $allowedIncludes, bool $paging = true)
+    {
+        $errors = $this->queryErrors($sortable, $allowedIncludes, $paging);
+        return $errors === [] ? null : $this->invalid($errors);
+    }
+
+    protected function queryErrors(array $sortable, array $allowedIncludes, bool $paging = true): array
+    {
+        $errors = [];
+        $request = $this->request;
+        if ($paging) {
+            $page = $request->getGet('page');
+            if ($page !== null && $page !== '' && (filter_var($page, FILTER_VALIDATE_INT) === false || (int) $page < 1)) {
+                $errors['page'] = ['Page must be a positive integer.'];
+            }
+            $limit = $request->getGet('limit');
+            if ($limit !== null && $limit !== '' && (filter_var($limit, FILTER_VALIDATE_INT) === false || (int) $limit < 1 || (int) $limit > 100)) {
+                $errors['limit'] = ['Limit must be an integer between 1 and 100.'];
+            }
+            $search = $request->getGet('search');
+            if (is_string($search) && strlen($search) > 150) {
+                $errors['search'] = ['Search must be at most 150 characters.'];
+            }
+            $sort = $request->getGet('sort');
+            if ($sort !== null && $sort !== '' && !in_array($sort, $sortable, true)) {
+                $errors['sort'] = ['Sort must be one of: ' . implode(', ', $sortable) . '.'];
+            }
+            $order = $request->getGet('order');
+            if ($order !== null && $order !== '' && !in_array(strtolower((string) $order), ['asc', 'desc'], true)) {
+                $errors['order'] = ['Order must be either asc or desc.'];
+            }
+        }
+        $include = $request->getGet('include');
+        if ($include !== null && $include !== '') {
+            $parts = array_values(array_filter(array_map('trim', explode(',', (string) $include)), static fn ($part) => $part !== ''));
+            $invalid = array_values(array_diff($parts, $allowedIncludes));
+            if ($invalid !== []) {
+                $allowed = $allowedIncludes === [] ? 'none' : implode(', ', $allowedIncludes);
+                $errors['include'] = ['Unsupported include value(s): ' . implode(', ', $invalid) . '. Allowed: ' . $allowed . '.'];
+            }
+        }
+        return $errors;
+    }
+
+    protected function optionalPositiveInt(string $key, array &$errors, ?string $message = null): void
+    {
+        $value = $this->request->getGet($key);
+        if ($value === null || $value === '') {
+            return;
+        }
+        if (filter_var($value, FILTER_VALIDATE_INT) === false || (int) $value < 1) {
+            $errors[$key] = [$message ?? ($key . ' must be a positive integer.')];
+        }
+    }
+
+    protected function optionalMinNumber(string $key, array &$errors, string $message): void
+    {
+        $value = $this->request->getGet($key);
+        if ($value === null || $value === '') {
+            return;
+        }
+        if (!is_numeric($value) || (float) $value < 0) {
+            $errors[$key] = [$message];
+        }
+    }
+
+    protected function textRule(bool $required, int $min, int $max, string $label): array
+    {
+        return [
+            'rules' => ($required ? 'required' : 'permit_empty') . "|string|min_length[{$min}]|max_length[{$max}]",
+            'errors' => [
+                'required' => "{$label} is required.",
+                'min_length' => "{$label} must be between {$min} and {$max} characters.",
+                'max_length' => "{$label} must be between {$min} and {$max} characters.",
+            ],
+        ];
+    }
+
+    protected function slugRule(int $max): array
+    {
+        return [
+            'rules' => "permit_empty|string|max_length[{$max}]|regex_match[/^[a-z0-9]+(?:-[a-z0-9]+)*$/]",
+            'errors' => [
+                'max_length' => "Slug must be between 1 and {$max} characters.",
+                'regex_match' => 'Slug may only contain lowercase letters, numbers and single hyphens.',
+            ],
+        ];
     }
 
     protected function validatePayload(array $data, array $rules): array

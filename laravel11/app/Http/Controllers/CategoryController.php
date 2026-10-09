@@ -29,11 +29,13 @@ class CategoryController extends Controller
             'Categories retrieved',
             ['id', 'created_at', 'updated_at', 'name', 'slug', 'description'],
             fn (Category $category) => $this->present($category, $request),
+            ['products'],
         );
     }
 
     public function show(Request $request, int $id)
     {
+        if ($failure = $this->guardQuery($request, [], ['products'], false)) return $failure;
         $category = Category::query()->find($id);
         if (!$category) return $this->fail(404, 'Category not found');
         return $this->ok('Category retrieved', $this->present($category, $request));
@@ -42,10 +44,10 @@ class CategoryController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:100'],
-            'slug' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'name' => ['required', 'string', 'min:2', 'max:100'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'description' => ['sometimes', 'nullable', 'string'],
-        ]);
+        ], $this->catalogMessages(100, 120));
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['name', 'slug', 'description']);
@@ -64,10 +66,10 @@ class CategoryController extends Controller
         $category = Category::query()->find($id);
         if (!$category) return $this->fail(404, 'Category not found');
         $validator = Validator::make($request->all(), [
-            'name' => ['sometimes', 'string', 'max:100'],
-            'slug' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'name' => ['sometimes', 'nullable', 'string', 'min:2', 'max:100'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:120', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'description' => ['sometimes', 'nullable', 'string'],
-        ]);
+        ], $this->catalogMessages(100, 120));
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['name', 'slug', 'description']);
@@ -102,5 +104,16 @@ class CategoryController extends Controller
             $data['products'] = $category->products->map(fn ($product) => $product->toApi())->all();
         }
         return $data;
+    }
+
+    private function catalogMessages(int $nameMax, int $slugMax): array
+    {
+        return [
+            'name.required' => 'Name is required.',
+            'name.min' => "Name must be between 2 and {$nameMax} characters.",
+            'name.max' => "Name must be between 2 and {$nameMax} characters.",
+            'slug.max' => "Slug must be between 1 and {$slugMax} characters.",
+            'slug.regex' => 'Slug may only contain lowercase letters, numbers and single hyphens.',
+        ];
     }
 }

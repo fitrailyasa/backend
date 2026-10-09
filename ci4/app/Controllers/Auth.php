@@ -13,13 +13,14 @@ class Auth extends BaseController
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $validation = service('validation');
         if (!$validation->setRules([
-            'name' => 'required|string|max_length[100]',
-            'email' => 'required|valid_email|max_length[150]',
-            'password' => 'required|string|min_length[8]',
-            'password_confirmation' => 'required|string',
+            'name' => $this->textRule(true, 2, 100, 'Name'),
+            'email' => 'required|valid_email|min_length[3]|max_length[150]',
+            'password' => 'required|string|min_length[8]|max_length[72]',
+            'password_confirmation' => 'required|string|matches[password]',
+        ], [
+            'password_confirmation' => ['matches' => 'password_confirmation must match password.', 'required' => 'password_confirmation is required.'],
+            'password' => ['min_length' => 'Password must be at least 8 characters long.', 'max_length' => 'Password must be at least 8 characters long.'],
         ])->run($data)) return $this->invalid($validation->getErrors());
-        if ($data['password'] !== $data['password_confirmation']) return $this->invalid(['password_confirmation' => 'The password confirmation does not match.']);
-
         $users = model(UserModel::class, false);
         if ($users->builder()->where('email', $data['email'])->countAllResults() > 0) return $this->fail(409, 'Email already exists');
         $users->insert([

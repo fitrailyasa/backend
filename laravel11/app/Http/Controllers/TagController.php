@@ -26,6 +26,7 @@ class TagController extends Controller
             'Tags retrieved',
             ['id', 'created_at', 'updated_at', 'name', 'slug'],
             fn (Tag $tag) => $tag->toApi(),
+            [],
         );
     }
 
@@ -39,8 +40,14 @@ class TagController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:60'],
-            'slug' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'name' => ['required', 'string', 'min:2', 'max:60'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
+        ], [
+            'name.required' => 'Name is required.',
+            'name.min' => 'Name must be between 2 and 60 characters.',
+            'name.max' => 'Name must be between 2 and 60 characters.',
+            'slug.max' => 'Slug must be between 1 and 80 characters.',
+            'slug.regex' => 'Slug may only contain lowercase letters, numbers and single hyphens.',
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
@@ -60,8 +67,13 @@ class TagController extends Controller
         $tag = Tag::query()->find($id);
         if (!$tag) return $this->fail(404, 'Tag not found');
         $validator = Validator::make($request->all(), [
-            'name' => ['sometimes', 'string', 'max:60'],
-            'slug' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'name' => ['sometimes', 'nullable', 'string', 'min:2', 'max:60'],
+            'slug' => ['sometimes', 'nullable', 'string', 'max:80', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
+        ], [
+            'name.min' => 'Name must be between 2 and 60 characters.',
+            'name.max' => 'Name must be between 2 and 60 characters.',
+            'slug.max' => 'Slug must be between 1 and 80 characters.',
+            'slug.regex' => 'Slug may only contain lowercase letters, numbers and single hyphens.',
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
