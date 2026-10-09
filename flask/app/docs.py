@@ -18,7 +18,7 @@ def register_docs(app: Flask) -> None:
             "/api/v1/docs",
             "/api/v1/docs.json",
             config={
-                "app_name": "Backend Starter Kit API",
+                "app_name": "Backend Starter Kit API - Flask",
                 "persistAuthorization": True,
                 "docExpansion": "list",
                 "deepLinking": True,

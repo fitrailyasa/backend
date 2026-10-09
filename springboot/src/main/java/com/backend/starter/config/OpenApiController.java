@@ -27,7 +27,7 @@ public class OpenApiController {
                 <html lang="en">
                 <head>
                   <meta charset="utf-8">
-                  <title>Backend Starter Kit API</title>
+                  <title>Backend Starter Kit API - Spring Boot</title>
                   <link rel="stylesheet" href="%s/swagger-ui.css">
                 </head>
                 <body>

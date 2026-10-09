@@ -389,7 +389,7 @@ const docsHTML = `<!DOCTYPE html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Backend Starter Kit API</title>
+  <title>Backend Starter Kit API - Go</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.21.0/swagger-ui.css" />
 </head>
 <body>

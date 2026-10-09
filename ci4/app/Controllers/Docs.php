@@ -13,7 +13,7 @@ class Docs extends BaseController
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Backend Starter Kit API</title>
+  <title>Backend Starter Kit API - CodeIgniter</title>
   <link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
 </head>
 <body>

@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Backend Starter Kit API",
+    "title": "Backend Starter Kit API - Go",
     "version": "1.0.0",
     "description": "Shared API contract implemented by every framework folder in this repository. All responses use the envelope `{ success, message, data }`; collections add `meta: { page, limit, total, total_pages }`; errors use `{ success: false, message, errors? }`. The `password` field is never returned.",
     "license": {

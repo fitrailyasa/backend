@@ -36,7 +36,7 @@ async function setupApp(app) {
 
   SwaggerModule.setup('api/v1/docs', app, document, {
     jsonDocumentUrl: 'api/v1/docs.json',
-    customSiteTitle: 'Backend Starter Kit API',
+    customSiteTitle: 'Backend Starter Kit API - NestJS',
     swaggerOptions: { persistAuthorization: true, docExpansion: 'list', deepLinking: true },
   });
 

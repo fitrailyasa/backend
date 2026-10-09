@@ -36,7 +36,7 @@ export async function setupApp(app: INestApplication): Promise<INestApplication>
 
   SwaggerModule.setup('api/v1/docs', app, document, {
     jsonDocumentUrl: 'api/v1/docs.json',
-    customSiteTitle: 'Backend Starter Kit API',
+    customSiteTitle: 'Backend Starter Kit API - NestTS',
     swaggerOptions: { persistAuthorization: true, docExpansion: 'list', deepLinking: true },
   });
 

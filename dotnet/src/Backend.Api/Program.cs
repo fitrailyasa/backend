@@ -143,8 +143,8 @@ if (!app.Environment.IsEnvironment("Testing"))
     app.UseSwaggerUI(options =>
     {
         options.RoutePrefix = "api/v1/docs";
-        options.DocumentTitle = "Backend Starter Kit API";
-        options.SwaggerEndpoint("/api/v1/docs.json", "Backend Starter Kit API");
+        options.DocumentTitle = "Backend Starter Kit API - .NET";
+        options.SwaggerEndpoint("/api/v1/docs.json", "Backend Starter Kit API - .NET");
         options.EnablePersistAuthorization();
         options.EnableDeepLinking();
         options.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.List);

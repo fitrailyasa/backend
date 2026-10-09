@@ -110,11 +110,11 @@ func TestHealthAndIndexAndDocs(t *testing.T) {
 		t.Fatalf("openapi version %v", document["openapi"])
 	}
 	info, _ := document["info"].(map[string]any)
-	if info["title"] != "Backend Starter Kit API" {
+	if info["title"] != "Backend Starter Kit API - Go" {
 		t.Fatalf("title %v", info["title"])
 	}
 	docs := perform(s, http.MethodGet, "/api/v1/docs", "", "")
-	if docs.Code != http.StatusOK || !strings.Contains(docs.Body.String(), "Backend Starter Kit API") {
+	if docs.Code != http.StatusOK || !strings.Contains(docs.Body.String(), "Backend Starter Kit API - Go") {
 		t.Fatalf("docs page %d", docs.Code)
 	}
 }

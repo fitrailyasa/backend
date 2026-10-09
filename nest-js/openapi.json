@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Backend Starter Kit API",
+    "title": "Backend Starter Kit API - NestJS",
     "version": "1.0.0",
     "description": "Shared API contract implemented by every framework folder in this repository. All responses use the envelope `{ success, message, data }`; collections add `meta: { page, limit, total, total_pages }`; errors use `{ success: false, message, errors? }`. The `password` field is never returned.",
     "license": {
@@ -96,10 +96,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "user",
-              "admin"
-            ]
+            "enum": ["user", "admin"]
           },
           "created_at": {
             "type": "string",
@@ -253,13 +250,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "paid",
-              "shipped",
-              "completed",
-              "cancelled"
-            ]
+            "enum": ["pending", "paid", "shipped", "completed", "cancelled"]
           },
           "total": {
             "type": "number",
@@ -324,16 +315,11 @@
               }
             },
             "example": {
-              "email": [
-                "The email has already been taken."
-              ]
+              "email": ["The email has already been taken."]
             }
           }
         },
-        "required": [
-          "success",
-          "message"
-        ]
+        "required": ["success", "message"]
       }
     }
   },
@@ -345,9 +331,7 @@
   "paths": {
     "/auth/register": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Register a new user",
         "security": [],
         "requestBody": {
@@ -379,12 +363,7 @@
                     "example": "password"
                   }
                 },
-                "required": [
-                  "name",
-                  "email",
-                  "password",
-                  "password_confirmation"
-                ]
+                "required": ["name", "email", "password", "password_confirmation"]
               }
             }
           }
@@ -426,10 +405,7 @@
                             },
                             "role": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "admin"
-                              ]
+                              "enum": ["user", "admin"]
                             },
                             "created_at": {
                               "type": "string",
@@ -487,16 +463,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -537,16 +508,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -562,9 +528,7 @@
     },
     "/auth/login": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Log in and receive a token pair",
         "security": [],
         "requestBody": {
@@ -585,10 +549,7 @@
                     "example": "password"
                   }
                 },
-                "required": [
-                  "email",
-                  "password"
-                ]
+                "required": ["email", "password"]
               }
             }
           }
@@ -630,10 +591,7 @@
                             },
                             "role": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "admin"
-                              ]
+                              "enum": ["user", "admin"]
                             },
                             "created_at": {
                               "type": "string",
@@ -691,16 +649,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -741,16 +694,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -766,9 +714,7 @@
     },
     "/auth/refresh": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Exchange a refresh token for a new token pair",
         "requestBody": {
           "required": false,
@@ -822,10 +768,7 @@
                             },
                             "role": {
                               "type": "string",
-                              "enum": [
-                                "user",
-                                "admin"
-                              ]
+                              "enum": ["user", "admin"]
                             },
                             "created_at": {
                               "type": "string",
@@ -883,16 +826,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -933,16 +871,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -958,9 +891,7 @@
     },
     "/auth/logout": {
       "post": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Revoke the current access token",
         "responses": {
           "200": {
@@ -1010,16 +941,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1060,16 +986,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1085,9 +1006,7 @@
     },
     "/auth/me": {
       "get": {
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "The currently authenticated user",
         "responses": {
           "200": {
@@ -1137,16 +1056,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1187,16 +1101,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1212,9 +1121,7 @@
     },
     "/users": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "List User",
         "parameters": [
           {
@@ -1256,10 +1163,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           }
@@ -1318,16 +1222,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1368,16 +1267,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1391,9 +1285,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Create User",
         "requestBody": {
           "required": true,
@@ -1419,18 +1311,11 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "user",
-                      "admin"
-                    ],
+                    "enum": ["user", "admin"],
                     "default": "user"
                   }
                 },
-                "required": [
-                  "name",
-                  "email",
-                  "password"
-                ]
+                "required": ["name", "email", "password"]
               }
             }
           }
@@ -1483,16 +1368,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1533,16 +1413,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1558,9 +1433,7 @@
     },
     "/users/{id}": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Get User",
         "parameters": [
           {
@@ -1621,16 +1494,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1671,16 +1539,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1694,9 +1557,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Replace User",
         "parameters": [
           {
@@ -1733,18 +1594,11 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "user",
-                      "admin"
-                    ],
+                    "enum": ["user", "admin"],
                     "default": "user"
                   }
                 },
-                "required": [
-                  "name",
-                  "email",
-                  "password"
-                ]
+                "required": ["name", "email", "password"]
               }
             }
           }
@@ -1797,16 +1651,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1847,16 +1696,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -1870,9 +1714,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Update User",
         "parameters": [
           {
@@ -1906,10 +1748,7 @@
                   },
                   "role": {
                     "type": "string",
-                    "enum": [
-                      "user",
-                      "admin"
-                    ]
+                    "enum": ["user", "admin"]
                   }
                 }
               }
@@ -1964,16 +1803,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2014,16 +1848,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2037,9 +1866,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Delete User",
         "parameters": [
           {
@@ -2100,16 +1927,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2150,16 +1972,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2175,9 +1992,7 @@
     },
     "/users/me": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "The currently authenticated user",
         "responses": {
           "200": {
@@ -2227,16 +2042,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2277,16 +2087,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2300,9 +2105,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Update the current user profile",
         "requestBody": {
           "required": true,
@@ -2381,16 +2184,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2431,16 +2229,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2456,9 +2249,7 @@
     },
     "/categories": {
       "get": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "List Category",
         "parameters": [
           {
@@ -2500,10 +2291,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -2512,9 +2300,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "products"
-              ]
+              "enum": ["products"]
             },
             "description": "Comma separated eager loads. Allowed: products."
           }
@@ -2573,16 +2359,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2623,16 +2404,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2646,9 +2422,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "Create Category",
         "requestBody": {
           "required": true,
@@ -2670,9 +2444,7 @@
                     "example": "Gadgets and devices"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -2725,16 +2497,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2775,16 +2542,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2800,9 +2562,7 @@
     },
     "/categories/{id}": {
       "get": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "Get Category",
         "parameters": [
           {
@@ -2819,9 +2579,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "products"
-              ]
+              "enum": ["products"]
             },
             "description": "Comma separated eager loads. Allowed: products."
           }
@@ -2874,16 +2632,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2924,16 +2677,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -2947,9 +2695,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "Replace Category",
         "parameters": [
           {
@@ -2982,9 +2728,7 @@
                     "example": "Gadgets and devices"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -3037,16 +2781,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3087,16 +2826,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3110,9 +2844,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "Update Category",
         "parameters": [
           {
@@ -3194,16 +2926,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3244,16 +2971,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3267,9 +2989,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "summary": "Delete Category",
         "parameters": [
           {
@@ -3330,16 +3050,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3380,16 +3095,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3405,9 +3115,7 @@
     },
     "/products": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "List Product",
         "parameters": [
           {
@@ -3449,10 +3157,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -3461,10 +3166,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "category",
-                "tags"
-              ]
+              "enum": ["category", "tags"]
             },
             "description": "Comma separated eager loads. Allowed: category, tags."
           },
@@ -3559,16 +3261,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3609,16 +3306,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3632,9 +3324,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Create Product",
         "requestBody": {
           "required": true,
@@ -3671,10 +3361,7 @@
                     "items": {
                       "type": "integer"
                     },
-                    "example": [
-                      1,
-                      2
-                    ],
+                    "example": [1, 2],
                     "description": "Tag ids. Accepted by Express, Flask, Django, Spring Boot, and .NET."
                   },
                   "tag_ids": {
@@ -3682,18 +3369,11 @@
                     "items": {
                       "type": "integer"
                     },
-                    "example": [
-                      1,
-                      2
-                    ],
+                    "example": [1, 2],
                     "description": "Tag ids. Accepted by NestJS, Laravel, CodeIgniter, and Rails."
                   }
                 },
-                "required": [
-                  "category_id",
-                  "name",
-                  "price"
-                ]
+                "required": ["category_id", "name", "price"]
               }
             }
           }
@@ -3746,16 +3426,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3796,16 +3471,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3821,9 +3491,7 @@
     },
     "/products/{id}": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Get Product",
         "parameters": [
           {
@@ -3840,10 +3508,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "category",
-                "tags"
-              ]
+              "enum": ["category", "tags"]
             },
             "description": "Comma separated eager loads. Allowed: category, tags."
           },
@@ -3932,16 +3597,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -3982,16 +3642,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4005,9 +3660,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Replace Product",
         "parameters": [
           {
@@ -4055,10 +3708,7 @@
                     "items": {
                       "type": "integer"
                     },
-                    "example": [
-                      1,
-                      2
-                    ],
+                    "example": [1, 2],
                     "description": "Tag ids. Accepted by Express, Flask, Django, Spring Boot, and .NET."
                   },
                   "tag_ids": {
@@ -4066,18 +3716,11 @@
                     "items": {
                       "type": "integer"
                     },
-                    "example": [
-                      1,
-                      2
-                    ],
+                    "example": [1, 2],
                     "description": "Tag ids. Accepted by NestJS, Laravel, CodeIgniter, and Rails."
                   }
                 },
-                "required": [
-                  "category_id",
-                  "name",
-                  "price"
-                ]
+                "required": ["category_id", "name", "price"]
               }
             }
           }
@@ -4130,16 +3773,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4180,16 +3818,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4203,9 +3836,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Update Product",
         "parameters": [
           {
@@ -4310,16 +3941,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4360,16 +3986,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4383,9 +4004,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "summary": "Delete Product",
         "parameters": [
           {
@@ -4446,16 +4065,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4496,16 +4110,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4521,9 +4130,7 @@
     },
     "/tags": {
       "get": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "List Tag",
         "parameters": [
           {
@@ -4565,10 +4172,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           }
@@ -4627,16 +4231,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4677,16 +4276,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4700,9 +4294,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "Create Tag",
         "requestBody": {
           "required": true,
@@ -4720,9 +4312,7 @@
                     "example": "gadget"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -4775,16 +4365,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4825,16 +4410,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4850,9 +4430,7 @@
     },
     "/tags/{id}": {
       "get": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "Get Tag",
         "parameters": [
           {
@@ -4913,16 +4491,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4963,16 +4536,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -4986,9 +4554,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "Replace Tag",
         "parameters": [
           {
@@ -5017,9 +4583,7 @@
                     "example": "gadget"
                   }
                 },
-                "required": [
-                  "name"
-                ]
+                "required": ["name"]
               }
             }
           }
@@ -5072,16 +4636,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5122,16 +4681,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5145,9 +4699,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "Update Tag",
         "parameters": [
           {
@@ -5226,16 +4778,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5276,16 +4823,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5299,9 +4841,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "summary": "Delete Tag",
         "parameters": [
           {
@@ -5362,16 +4902,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5412,16 +4947,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5437,9 +4967,7 @@
     },
     "/orders": {
       "get": {
-        "tags": [
-          "Orders"
-        ],
+        "tags": ["Orders"],
         "summary": "List orders. Regular users see their own orders, admins see all",
         "parameters": [
           {
@@ -5481,10 +5009,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -5493,11 +5018,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "items",
-                "items.product",
-                "user"
-              ]
+              "enum": ["items", "items.product", "user"]
             },
             "description": "Comma separated eager loads. Allowed: items, items.product, user."
           },
@@ -5506,13 +5027,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "pending",
-                "paid",
-                "shipped",
-                "completed",
-                "cancelled"
-              ]
+              "enum": ["pending", "paid", "shipped", "completed", "cancelled"]
             }
           },
           {
@@ -5578,16 +5093,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5628,16 +5138,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5651,9 +5156,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Orders"
-        ],
+        "tags": ["Orders"],
         "summary": "Create an order. The total is computed server side and stock is decremented",
         "requestBody": {
           "required": true,
@@ -5677,16 +5180,11 @@
                           "example": 2
                         }
                       },
-                      "required": [
-                        "product_id",
-                        "quantity"
-                      ]
+                      "required": ["product_id", "quantity"]
                     }
                   }
                 },
-                "required": [
-                  "items"
-                ]
+                "required": ["items"]
               }
             }
           }
@@ -5739,16 +5237,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5789,16 +5282,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5814,9 +5302,7 @@
     },
     "/orders/{id}": {
       "get": {
-        "tags": [
-          "Orders"
-        ],
+        "tags": ["Orders"],
         "summary": "Get an order. Owner or admin only",
         "parameters": [
           {
@@ -5833,11 +5319,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "items",
-                "items.product",
-                "user"
-              ]
+              "enum": ["items", "items.product", "user"]
             },
             "description": "Comma separated eager loads. Allowed: items, items.product, user."
           }
@@ -5890,16 +5372,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5940,16 +5417,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -5963,9 +5435,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Orders"
-        ],
+        "tags": ["Orders"],
         "summary": "Delete an order. Admin only",
         "parameters": [
           {
@@ -6026,16 +5496,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6076,16 +5541,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6101,9 +5561,7 @@
     },
     "/orders/{id}/status": {
       "patch": {
-        "tags": [
-          "Orders"
-        ],
+        "tags": ["Orders"],
         "summary": "Update order status. Owners may only move a pending order to cancelled",
         "parameters": [
           {
@@ -6125,19 +5583,11 @@
                 "properties": {
                   "status": {
                     "type": "string",
-                    "enum": [
-                      "pending",
-                      "paid",
-                      "shipped",
-                      "completed",
-                      "cancelled"
-                    ],
+                    "enum": ["pending", "paid", "shipped", "completed", "cancelled"],
                     "example": "cancelled"
                   }
                 },
-                "required": [
-                  "status"
-                ]
+                "required": ["status"]
               }
             }
           }
@@ -6190,16 +5640,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6240,16 +5685,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6265,9 +5705,7 @@
     },
     "/products/{productId}/comments": {
       "get": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "List comments for a product",
         "parameters": [
           {
@@ -6318,10 +5756,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -6330,10 +5765,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "user",
-                "product"
-              ]
+              "enum": ["user", "product"]
             },
             "description": "Comma separated eager loads. Allowed: user, product."
           },
@@ -6399,16 +5831,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6449,16 +5876,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6472,9 +5894,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Create a comment on a product",
         "parameters": [
           {
@@ -6499,9 +5919,7 @@
                     "example": "Great product!"
                   }
                 },
-                "required": [
-                  "body"
-                ]
+                "required": ["body"]
               }
             }
           }
@@ -6554,16 +5972,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6604,16 +6017,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6629,9 +6037,7 @@
     },
     "/comments": {
       "get": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "List comments across products",
         "parameters": [
           {
@@ -6673,10 +6079,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -6685,10 +6088,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "user",
-                "product"
-              ]
+              "enum": ["user", "product"]
             },
             "description": "Comma separated eager loads. Allowed: user, product."
           },
@@ -6761,16 +6161,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6811,16 +6206,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6836,9 +6226,7 @@
     },
     "/comments/{id}": {
       "patch": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Update a comment. Owner or admin only",
         "parameters": [
           {
@@ -6862,9 +6250,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "body"
-                ]
+                "required": ["body"]
               }
             }
           }
@@ -6917,16 +6303,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6967,16 +6348,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -6990,9 +6366,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Comments"
-        ],
+        "tags": ["Comments"],
         "summary": "Delete a comment. Owner or admin only",
         "parameters": [
           {
@@ -7053,16 +6427,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -7103,16 +6472,11 @@
                         }
                       },
                       "example": {
-                        "email": [
-                          "The email has already been taken."
-                        ]
+                        "email": ["The email has already been taken."]
                       }
                     }
                   },
-                  "required": [
-                    "success",
-                    "message"
-                  ]
+                  "required": ["success", "message"]
                 }
               }
             }
@@ -7128,9 +6492,7 @@
     },
     "/": {
       "get": {
-        "tags": [
-          "System"
-        ],
+        "tags": ["System"],
         "summary": "API index listing every available route",
         "security": [],
         "responses": {
@@ -7162,9 +6524,7 @@
     },
     "/docs": {
       "get": {
-        "tags": [
-          "System"
-        ],
+        "tags": ["System"],
         "summary": "Swagger UI for this API",
         "security": [],
         "responses": {
@@ -7184,9 +6544,7 @@
     },
     "/docs.json": {
       "get": {
-        "tags": [
-          "System"
-        ],
+        "tags": ["System"],
         "summary": "This OpenAPI 3.0 document",
         "security": [],
         "responses": {
