@@ -194,6 +194,24 @@ services:
       JWT_EXPIRES_IN: 3600
       JWT_REFRESH_EXPIRES_IN: 604800
 
+  go:
+    <<: *db-wait
+    build: ./go
+    ports:
+      - "8090:8090"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8090
+      API_BASE_URL: http://go.${DOMAIN:-example.com}
+      DB_DIALECT: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: backend_starter
+      DB_USER: root
+      DB_PASSWORD: secret
+      DB_SYNC: "false"
+      JWT_SECRET: change-me-to-a-long-random-string-at-least-32-chars
+
   nginx:
     image: nginx:1.27-alpine
     ports:
@@ -214,6 +232,7 @@ services:
       - laravel11
       - springboot
       - ci4
+      - go
 
 volumes:
   mysql_data:

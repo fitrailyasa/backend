@@ -1,0 +1,375 @@
+# Go (Gin) — exercise every /api/v1 contract endpoint
+# Open this file with the REST Client extension (VS Code / Cursor).
+# 1. Start this framework's server, then seed the demo data.
+# 2. Send "Login admin" and "Login user" first. Tokens are filled from those responses.
+# 3. Ids below assume the seed result (admin = 1, user = 2, categories/products/tags start at 1).
+
+@host = http://localhost:8090
+@baseUrl = {{host}}/api/v1
+@categoryId = 1
+@productId = 1
+@tagId = 1
+@userId = 2
+@orderId = 1
+@commentId = 1
+
+### Health
+GET {{host}}/health
+
+### Route index
+GET {{baseUrl}}
+
+### OpenAPI JSON
+GET {{baseUrl}}/docs.json
+
+###############################################################################
+# Auth
+###############################################################################
+
+### Register
+# Change the email if this account already exists (422).
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "HTTP Client",
+  "email": "http-client@example.com",
+  "password": "password",
+  "password_confirmation": "password"
+}
+
+### Login admin
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password"
+}
+
+### Login user
+# @name loginUser
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password"
+}
+
+### Auth me (admin)
+@adminToken = {{loginAdmin.response.body.$.data.token}}
+@adminRefresh = {{loginAdmin.response.body.$.data.refresh_token}}
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{adminToken}}
+
+### Auth me (user)
+@userToken = {{loginUser.response.body.$.data.token}}
+@userRefresh = {{loginUser.response.body.$.data.refresh_token}}
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{userToken}}
+
+### Refresh (body)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+Authorization: Bearer {{adminRefresh}}
+
+{
+  "refresh_token": "{{adminRefresh}}"
+}
+
+### Refresh (Bearer only)
+POST {{baseUrl}}/auth/refresh
+Authorization: Bearer {{userRefresh}}
+
+### Logout admin
+# Blacklists the admin access token. Log in again after this if you still need @adminToken.
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Users
+###############################################################################
+
+### My profile
+GET {{baseUrl}}/users/me
+Authorization: Bearer {{userToken}}
+
+### Update my profile
+PATCH {{baseUrl}}/users/me
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "name": "User"
+}
+
+### List users (admin)
+GET {{baseUrl}}/users?page=1&limit=10&search=example.com&sort=id&order=desc
+Authorization: Bearer {{adminToken}}
+
+### Get a user (admin)
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+### Create a user (admin)
+POST {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP Admin Created",
+  "email": "created-by-admin@example.com",
+  "password": "password",
+  "role": "user"
+}
+
+### Replace a user (admin)
+PUT {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "User",
+  "email": "user@example.com",
+  "password": "password",
+  "role": "user"
+}
+
+### Update a user (admin)
+PATCH {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "User"
+}
+
+### Delete a user (admin)
+# Do not delete the admin (id 1). Point @userId at a user that can be deleted.
+DELETE {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Categories
+###############################################################################
+
+### List categories
+GET {{baseUrl}}/categories?page=1&limit=10&search=book&sort=name&order=asc&include=products
+
+### Get a category
+GET {{baseUrl}}/categories/{{categoryId}}?include=products
+
+### Create a category (admin)
+POST {{baseUrl}}/categories
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP Category",
+  "description": "Created from api.http"
+}
+
+### Replace a category (admin)
+PUT {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Electronics",
+  "slug": "electronics",
+  "description": "Phones, laptops, audio and every day gadgets."
+}
+
+### Update a category (admin)
+PATCH {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "description": "Phones, laptops, audio and every day gadgets."
+}
+
+### Delete a category (admin)
+# Fails with 409/500 while products still exist (ON DELETE RESTRICT). Use an empty category id.
+DELETE {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Products
+###############################################################################
+
+### List products
+GET {{baseUrl}}/products?page=1&limit=10&search=phone&sort=price&order=asc&category_id=1&tag_id=1&tag=featured&min_price=0&max_price=20000000&include=category,tags
+
+### Get a product
+GET {{baseUrl}}/products/{{productId}}?include=category,tags
+
+### Create a product (admin)
+POST {{baseUrl}}/products
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "category_id": {{categoryId}},
+  "name": "HTTP Product",
+  "description": "Created from api.http",
+  "price": 150000,
+  "stock": 25,
+  "tags": [{{tagId}}]
+}
+
+### Replace a product (admin)
+PUT {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "category_id": 1,
+  "name": "Smartphone X Pro",
+  "slug": "smartphone-x-pro",
+  "description": "6.7 inch AMOLED display with a triple camera.",
+  "price": 8990000,
+  "stock": 40,
+  "tags": [1, 2]
+}
+
+### Update a product (admin)
+PATCH {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "stock": 40
+}
+
+### Delete a product (admin)
+# Fails while an order item still references the product (ON DELETE RESTRICT).
+DELETE {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Tags
+###############################################################################
+
+### List tags
+GET {{baseUrl}}/tags?page=1&limit=10&search=feature&sort=name&order=asc
+
+### Get a tag
+GET {{baseUrl}}/tags/{{tagId}}
+
+### Create a tag (admin)
+POST {{baseUrl}}/tags
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP Tag"
+}
+
+### Replace a tag (admin)
+PUT {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Featured",
+  "slug": "featured"
+}
+
+### Update a tag (admin)
+PATCH {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "Featured"
+}
+
+### Delete a tag (admin)
+DELETE {{baseUrl}}/tags/{{tagId}}
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Orders
+###############################################################################
+
+### List the caller's orders
+GET {{baseUrl}}/orders?page=1&limit=10&status=pending&sort=id&order=desc&include=items,items.product,user
+Authorization: Bearer {{userToken}}
+
+### List all orders (admin, filter by user)
+GET {{baseUrl}}/orders?status=paid&user_id=2&include=items,items.product,user
+Authorization: Bearer {{adminToken}}
+
+### Get an order
+GET {{baseUrl}}/orders/{{orderId}}?include=items,items.product,user
+Authorization: Bearer {{adminToken}}
+
+### Create an order 
+# The server calculates the total. Product stock is decremented.
+POST {{baseUrl}}/orders
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "items": [
+    { "product_id": 10, "quantity": 1 },
+    { "product_id": 6, "quantity": 1 }
+  ]
+}
+
+### Update status (owner, pending to cancelled only)
+PATCH {{baseUrl}}/orders/{{orderId}}/status
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "status": "cancelled"
+}
+
+### Update status (admin)
+PATCH {{baseUrl}}/orders/{{orderId}}/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "paid"
+}
+
+### Delete an order (admin)
+DELETE {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{adminToken}}
+
+###############################################################################
+# Comments
+###############################################################################
+
+### List comments
+GET {{baseUrl}}/comments?page=1&limit=10&product_id={{productId}}&search=battery&sort=id&order=desc
+
+### Comments for one product
+GET {{baseUrl}}/products/{{productId}}/comments?page=1&limit=10
+
+### Create a comment 
+POST {{baseUrl}}/products/{{productId}}/comments
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "body": "Comment from api.http"
+}
+
+### Update a comment (owner or admin)
+PATCH {{baseUrl}}/comments/{{commentId}}
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "body": "Comment updated from api.http"
+}
+
+### Delete a comment (owner or admin)
+DELETE {{baseUrl}}/comments/{{commentId}}
+Authorization: Bearer {{adminToken}}
