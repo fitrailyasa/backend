@@ -8,8 +8,8 @@ RUN apt-get update \
 
 COPY Gemfile Gemfile.lock ./
 COPY vendor/mysql2-pure vendor/mysql2-pure
-RUN bundle config set --local without "test" \
-    && bundle install
+ENV BUNDLE_WITHOUT=test
+RUN bundle install
 
 COPY . .
 
