@@ -21,7 +21,19 @@ export function createApp() {
   app.set('etag', false);
 
   app.use(requestId);
-  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      // The API is served over HTTP. Helmet's default policy upgrades every
+      // asset request to HTTPS, which leaves Swagger UI blank.
+      contentSecurityPolicy: {
+        directives: {
+          upgradeInsecureRequests: null,
+        },
+      },
+      strictTransportSecurity: false,
+    }),
+  );
   app.use(
     cors({
       origin: env.corsOrigin,
