@@ -24,7 +24,7 @@ export const paginationRules = (sortable = []) => [
     .isInt({ min: 1, max: env.pagination.maxLimit })
     .withMessage(`Limit must be an integer between 1 and ${env.pagination.maxLimit}.`)
     .toInt(),
-  query('search').optional().isString().withMessage('Search must be a string.').trim().isLength({ max: 150 }),
+  query('search').optional().isString().withMessage('Search must be a string.').trim().isLength({ max: 150 }).withMessage('Search must be at most 150 characters.'),
   query('sort')
     .optional()
     .isString()

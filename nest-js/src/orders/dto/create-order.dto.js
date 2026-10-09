@@ -15,14 +15,14 @@ const toNumber = ({ value }) =>
 class CreateOrderItemDto {
   @ApiProperty({ type: Number, example: 1 })
   @Transform(toNumber)
-  @IsInt({ message: 'product_id must be an integer number' })
-  @Min(1, { message: 'product_id must be greater than or equal to 1' })
+  @IsInt({ message: 'product_id must be a positive integer.' })
+  @Min(1, { message: 'product_id must be a positive integer.' })
   product_id;
 
   @ApiProperty({ type: Number, example: 2, minimum: 1 })
   @Transform(toNumber)
-  @IsInt({ message: 'quantity must be an integer number' })
-  @Min(1, { message: 'quantity must be greater than or equal to 1' })
+  @IsInt({ message: 'quantity must be a positive integer.' })
+  @Min(1, { message: 'quantity must be a positive integer.' })
   quantity;
 }
 

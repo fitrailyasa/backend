@@ -17,8 +17,8 @@ export type SortOrder = 'asc' | 'desc';
 export class PaginationQueryDto {
   @ApiPropertyOptional({ minimum: 1, default: DEFAULT_PAGE, description: 'Page number' })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Page must be a positive integer.' })
+  @Min(1, { message: 'Page must be a positive integer.' })
   @IsOptional()
   page: number = DEFAULT_PAGE;
 
@@ -29,15 +29,15 @@ export class PaginationQueryDto {
     description: 'Items per page',
   })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(MAX_LIMIT)
+  @IsInt({ message: 'Limit must be an integer between 1 and 100.' })
+  @Min(1, { message: 'Limit must be an integer between 1 and 100.' })
+  @Max(MAX_LIMIT, { message: 'Limit must be an integer between 1 and 100.' })
   @IsOptional()
   limit: number = DEFAULT_LIMIT;
 
   @ApiPropertyOptional({ description: 'LIKE search on the relevant columns (name / email / body)' })
-  @IsString()
-  @MaxLength(150)
+  @IsString({ message: 'Search must be a string.' })
+  @MaxLength(150, { message: 'Search must be at most 150 characters.' })
   @IsOptional()
   search?: string;
 
@@ -48,7 +48,7 @@ export class PaginationQueryDto {
   sort?: string;
 
   @ApiPropertyOptional({ enum: ['asc', 'desc'], default: DEFAULT_ORDER })
-  @IsIn(['asc', 'desc'])
+  @IsIn(['asc', 'desc'], { message: 'Order must be either asc or desc.' })
   @IsOptional()
   order: SortOrder = DEFAULT_ORDER;
 

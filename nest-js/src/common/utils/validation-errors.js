@@ -10,7 +10,7 @@ const flattenValidationErrors = (errors, parent = '') => {
     const path = parent ? `${parent}.${error.property}` : error.property;
 
     if (error.constraints) {
-      out[path] = Object.values(error.constraints);
+      out[path] = [...new Set(Object.values(error.constraints).map(String))];
     }
 
     if (error.children?.length) {

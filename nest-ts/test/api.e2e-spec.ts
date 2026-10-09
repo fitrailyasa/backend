@@ -434,4 +434,44 @@ describe('HTTP API', () => {
     const empty = await http().get(`${PREFIX}/comments`);
     expect(empty.body.meta.total).toBe(0);
   });
+
+  it('rejects invalid register fields, list queries, and category writes', async () => {
+    const invalid = await http().post(`${PREFIX}/auth/register`).send({
+      name: 'A',
+      email: 'bad',
+      password: 'short',
+      password_confirmation: 'nope',
+    });
+    expect(invalid.status).toBe(422);
+    for (const field of ['name', 'email', 'password', 'password_confirmation']) {
+      expect(Array.isArray(invalid.body.errors[field])).toBe(true);
+    }
+
+    const listed = await http().get(
+      `${PREFIX}/categories?page=0&limit=0&sort=nope&order=sideways&include=nope`,
+    );
+    expect(listed.status).toBe(422);
+    for (const field of ['page', 'limit', 'sort', 'order', 'include']) {
+      expect(Array.isArray(listed.body.errors[field])).toBe(true);
+    }
+
+    const anonymous = await http().post(`${PREFIX}/categories`).send({ name: 'Valid Name' });
+    expect(anonymous.status).toBe(401);
+
+    const adminHeaders = bearer(await login((await createAdmin()).email));
+    const rejected = await http()
+      .post(`${PREFIX}/categories`)
+      .set(adminHeaders)
+      .send({ name: 'X', slug: 'Bad Slug' });
+    expect(rejected.status).toBe(422);
+    expect(Array.isArray(rejected.body.errors.name)).toBe(true);
+    expect(Array.isArray(rejected.body.errors.slug)).toBe(true);
+
+    const created = await http()
+      .post(`${PREFIX}/categories`)
+      .set(adminHeaders)
+      .send({ name: 'Valid Category Name' });
+    expect(created.status).toBe(201);
+    expect(created.body.data.slug).toBe('valid-category-name');
+  });
 });

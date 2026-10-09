@@ -12,7 +12,7 @@ const Order = sequelize.define(
       type: DataTypes.ENUM(...ORDER_STATUSES),
       allowNull: false,
       defaultValue: 'pending',
-      validate: { isIn: { args: [ORDER_STATUSES], msg: `Status must be one of: ${ORDER_STATUSES.join(', ')}` } },
+      validate: { isIn: { args: [ORDER_STATUSES], msg: `Status must be one of: ${ORDER_STATUSES.join(', ')}.` } },
     },
     total: {
       type: DataTypes.DECIMAL(12, 2),

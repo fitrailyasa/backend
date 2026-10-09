@@ -19,15 +19,15 @@ class QueryOrdersDto extends PaginationDto {
   @ApiProperty({ enum: ORDER_STATUSES, required: false })
   @IsOptional()
   @IsEnum(ORDER_STATUSES, {
-    message: `status must be one of the following values: ${ORDER_STATUSES.join(', ')}`,
+    message: `Status must be one of: ${ORDER_STATUSES.join(', ')}.`,
   })
   status;
 
   @ApiProperty({ type: Number, example: 1, required: false, description: 'Admin only' })
   @IsOptional()
   @Transform(toNumber)
-  @IsInt({ message: 'user_id must be an integer number' })
-  @Min(1, { message: 'user_id must be greater than or equal to 1' })
+  @IsInt({ message: 'user_id must be a positive integer.' })
+  @Min(1, { message: 'user_id must be a positive integer.' })
   user_id;
 
   @ApiProperty({ type: String, example: 'items,user', required: false })

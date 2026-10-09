@@ -5,7 +5,7 @@ const { ORDER_STATUSES } = require('../entities/order.entity');
 class UpdateOrderStatusDto {
   @ApiProperty({ enum: ORDER_STATUSES, example: 'paid' })
   @IsEnum(ORDER_STATUSES, {
-    message: `status must be one of the following values: ${ORDER_STATUSES.join(', ')}`,
+    message: `Status must be one of: ${ORDER_STATUSES.join(', ')}.`,
   })
   status;
 }

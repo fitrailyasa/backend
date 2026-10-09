@@ -18,8 +18,8 @@ export class QueryCommentsDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by product id' })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'product_id must be a positive integer.' })
+  @Min(1, { message: 'product_id must be a positive integer.' })
   @IsOptional()
   product_id?: number;
 }

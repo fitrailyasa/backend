@@ -18,7 +18,7 @@ module ApiQueries
     end
     if search.present?
       errors["search"] << "Search must be a string." unless search.is_a?(String)
-      errors["search"] << "Search is too long." if search.to_s.length > 150
+      errors["search"] << "Search must be at most 150 characters." if search.to_s.length > 150
     end
     if sort.present? && !sort.is_a?(String)
       errors["sort"] << "Sort must be a string."

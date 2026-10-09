@@ -5,7 +5,7 @@ import { OrderStatus } from '../entities/order.entity';
 export class UpdateOrderStatusDto {
   @ApiProperty({ enum: OrderStatus, example: OrderStatus.PAID })
   @IsEnum(OrderStatus, {
-    message: `status must be one of the following values: ${Object.values(OrderStatus).join(', ')}`,
+    message: `Status must be one of: ${Object.values(OrderStatus).join(', ')}.`,
   })
   status!: OrderStatus;
 }

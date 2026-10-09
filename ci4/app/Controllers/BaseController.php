@@ -173,6 +173,31 @@ abstract class BaseController extends Controller
         }
     }
 
+    protected function emailRule(bool $required = true): array
+    {
+        return [
+            'rules' => ($required ? 'required' : 'permit_empty') . '|valid_email|min_length[3]|max_length[150]',
+            'errors' => [
+                'required' => 'Email is required.',
+                'valid_email' => 'The email must be a valid email address.',
+                'min_length' => 'Email must be between 3 and 150 characters.',
+                'max_length' => 'Email must be between 3 and 150 characters.',
+            ],
+        ];
+    }
+
+    protected function passwordRule(bool $required = true): array
+    {
+        return [
+            'rules' => ($required ? 'required' : 'permit_empty') . '|string|min_length[8]|max_length[72]',
+            'errors' => [
+                'required' => 'Password is required.',
+                'min_length' => 'Password must be at least 8 characters long.',
+                'max_length' => 'Password must be at least 8 characters long.',
+            ],
+        ];
+    }
+
     protected function textRule(bool $required, int $min, int $max, string $label): array
     {
         return [

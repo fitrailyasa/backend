@@ -213,6 +213,52 @@ class ApiIntegrationTest {
         assertThat(restored.path("data").path("stock").asInt()).isEqualTo(5);
     }
 
+    @Test
+    void registerListQueryAndCategoryWritesAreValidated() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"A\",\"email\":\"bad\",\"password\":\"short\",\"password_confirmation\":\"nope\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors.name").isArray())
+                .andExpect(jsonPath("$.errors.email").isArray())
+                .andExpect(jsonPath("$.errors.password").isArray())
+                .andExpect(jsonPath("$.errors.password_confirmation").isArray());
+
+        mockMvc.perform(get("/api/v1/categories")
+                        .param("page", "0")
+                        .param("limit", "0")
+                        .param("sort", "nope")
+                        .param("order", "sideways")
+                        .param("include", "nope"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors.page").isArray())
+                .andExpect(jsonPath("$.errors.limit").isArray())
+                .andExpect(jsonPath("$.errors.sort").isArray())
+                .andExpect(jsonPath("$.errors.order").isArray())
+                .andExpect(jsonPath("$.errors.include").isArray());
+
+        mockMvc.perform(post("/api/v1/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Valid Name\"}"))
+                .andExpect(status().isUnauthorized());
+
+        String token = login("admin@example.com", "password");
+        mockMvc.perform(post("/api/v1/categories")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"X\",\"slug\":\"Bad Slug\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.errors.name").isArray())
+                .andExpect(jsonPath("$.errors.slug").isArray());
+
+        mockMvc.perform(post("/api/v1/categories")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"Valid Category Name\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.slug").value("valid-category-name"));
+    }
+
     private String register(String email) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

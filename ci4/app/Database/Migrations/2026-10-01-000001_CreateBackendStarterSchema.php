@@ -117,9 +117,11 @@ class CreateBackendStarterSchema extends Migration
         $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('comments');
 
-        $this->db->query('ALTER TABLE products ADD CONSTRAINT products_price_check CHECK (price >= 0)');
-        $this->db->query('ALTER TABLE products ADD CONSTRAINT products_stock_check CHECK (stock >= 0)');
-        $this->db->query('ALTER TABLE order_items ADD CONSTRAINT order_items_quantity_check CHECK (quantity > 0)');
+        if ($this->db->DBDriver === 'MySQLi') {
+            $this->db->query('ALTER TABLE products ADD CONSTRAINT products_price_check CHECK (price >= 0)');
+            $this->db->query('ALTER TABLE products ADD CONSTRAINT products_stock_check CHECK (stock >= 0)');
+            $this->db->query('ALTER TABLE order_items ADD CONSTRAINT order_items_quantity_check CHECK (quantity > 0)');
+        }
     }
 
     public function down()

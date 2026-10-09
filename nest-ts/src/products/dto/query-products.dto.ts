@@ -18,15 +18,15 @@ export class QueryProductsDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by category id' })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'category_id must be a positive integer.' })
+  @Min(1, { message: 'category_id must be a positive integer.' })
   @IsOptional()
   category_id?: number;
 
   @ApiPropertyOptional({ description: 'Filter by tag id' })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'tag_id must be a positive integer.' })
+  @Min(1, { message: 'tag_id must be a positive integer.' })
   @IsOptional()
   tag_id?: number;
 
@@ -39,15 +39,15 @@ export class QueryProductsDto extends PaginationQueryDto {
 
   @ApiPropertyOptional({ description: 'Minimum price (inclusive)' })
   @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'min_price must be a number greater than or equal to 0.' })
+  @Min(0, { message: 'min_price must be a number greater than or equal to 0.' })
   @IsOptional()
   min_price?: number;
 
   @ApiPropertyOptional({ description: 'Maximum price (inclusive)' })
   @Type(() => Number)
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'max_price must be a number greater than or equal to 0.' })
+  @Min(0, { message: 'max_price must be a number greater than or equal to 0.' })
   @IsOptional()
   max_price?: number;
 }

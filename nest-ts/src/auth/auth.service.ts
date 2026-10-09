@@ -59,7 +59,7 @@ export class AuthService {
     if (dto.password !== dto.password_confirmation) {
       throw new UnprocessableEntityException({
         message: 'Validation failed',
-        errors: { password_confirmation: ['The password confirmation does not match.'] },
+        errors: { password_confirmation: ['password_confirmation must match password.'] },
       });
     }
 

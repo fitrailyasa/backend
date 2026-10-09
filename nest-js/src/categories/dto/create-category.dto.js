@@ -9,9 +9,9 @@ const slugProvided = (_, value) => value !== undefined && value !== null && Stri
 class CreateCategoryDto {
   @ApiProperty({ type: String, example: 'Electronics', minLength: 2, maxLength: 100 })
   @Trim()
-  @IsString({ message: 'name must be a string' })
-  @MinLength(2, { message: 'name must be longer than or equal to 2 characters' })
-  @MaxLength(100, { message: 'name must be shorter than or equal to 100 characters' })
+  @IsString({ message: 'Name must be a string.' })
+  @MinLength(2, { message: 'Name must be between 2 and 100 characters.' })
+  @MaxLength(100, { message: 'Name must be between 2 and 100 characters.' })
   name;
 
   @ApiProperty({
@@ -22,16 +22,16 @@ class CreateCategoryDto {
   })
   @IsOptional()
   @ValidateIf(slugProvided)
-  @IsString({ message: 'slug must be a string' })
-  @MaxLength(120, { message: 'slug must be shorter than or equal to 120 characters' })
+  @IsString({ message: 'Slug must be a string.' })
+  @MaxLength(120, { message: 'Slug must be between 1 and 120 characters.' })
   @Matches(SLUG_RE, { message: SLUG_MESSAGE })
   slug;
 
   @ApiProperty({ type: String, example: 'Phones, laptops and accessories', required: false })
   @IsOptional()
   @Trim()
-  @IsString({ message: 'description must be a string' })
-  @MaxLength(2000, { message: 'description must be shorter than or equal to 2000 characters' })
+  @IsString({ message: 'Description must be a string.' })
+  @MaxLength(2000, { message: 'Description must be at most 2000 characters.' })
   description;
 }
 

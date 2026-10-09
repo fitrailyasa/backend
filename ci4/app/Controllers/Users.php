@@ -26,9 +26,9 @@ class Users extends BaseController
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
             'name' => $this->textRule(true, 2, 100, 'Name'),
-            'email' => 'required|valid_email|min_length[3]|max_length[150]',
-            'role' => 'permit_empty|in_list[user,admin]',
-            'password' => 'required|string|min_length[8]|max_length[72]',
+            'email' => $this->emailRule(),
+            'role' => ['rules' => 'permit_empty|in_list[user,admin]', 'errors' => ['in_list' => 'Role must be one of: user, admin.']],
+            'password' => $this->passwordRule(),
         ]);
         if ($errors) return $this->invalid($errors);
         $values = array_intersect_key($data, array_flip(['name', 'email', 'role']));
@@ -54,9 +54,9 @@ class Users extends BaseController
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
             'name' => $this->textRule(false, 2, 100, 'Name'),
-            'email' => 'permit_empty|valid_email|min_length[3]|max_length[150]',
-            'role' => 'permit_empty|in_list[user,admin]',
-            'password' => 'permit_empty|string|min_length[8]|max_length[72]',
+            'email' => $this->emailRule(false),
+            'role' => ['rules' => 'permit_empty|in_list[user,admin]', 'errors' => ['in_list' => 'Role must be one of: user, admin.']],
+            'password' => $this->passwordRule(false),
         ]);
         if ($errors) return $this->invalid($errors);
         $values = array_intersect_key($data, array_flip(['name', 'email', 'role']));
@@ -101,8 +101,8 @@ class Users extends BaseController
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $errors = $this->validatePayload($data, [
             'name' => $this->textRule(false, 2, 100, 'Name'),
-            'email' => 'permit_empty|valid_email|min_length[3]|max_length[150]',
-            'password' => 'permit_empty|string|min_length[8]|max_length[72]',
+            'email' => $this->emailRule(false),
+            'password' => $this->passwordRule(false),
         ]);
         if ($errors) return $this->invalid($errors);
         if (isset($data['password_confirmation']) && ($data['password_confirmation'] ?? null) !== ($data['password'] ?? null)) {

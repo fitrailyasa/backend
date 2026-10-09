@@ -48,7 +48,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'min:3', 'max:150'],
             'role' => ['sometimes', Rule::in(['user', 'admin'])],
             'password' => ['required', 'string', 'min:8', 'max:72'],
-        ]);
+        ], $this->accountMessages());
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['name', 'email', 'role']);
@@ -71,7 +71,7 @@ class UserController extends Controller
             'email' => ['sometimes', 'email', 'min:3', 'max:150'],
             'role' => ['sometimes', Rule::in(['user', 'admin'])],
             'password' => ['sometimes', 'string', 'min:8', 'max:72'],
-        ]);
+        ], $this->accountMessages());
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = $request->only(['name', 'email', 'role']);
@@ -120,7 +120,7 @@ class UserController extends Controller
             'email' => ['sometimes', 'email', 'min:3', 'max:150', Rule::unique('users', 'email')->ignore($current->id)],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'max:72'],
             'password_confirmation' => ['sometimes', 'nullable', 'string', 'same:password'],
-        ]);
+        ], $this->accountMessages());
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 
         $data = ['updated_at' => now()];
@@ -137,5 +137,24 @@ class UserController extends Controller
             'created_at' => $user['created_at'],
             'updated_at' => $user['updated_at'],
         ]);
+    }
+
+    private function accountMessages(): array
+    {
+        return [
+            'name.required' => 'Name is required.',
+            'name.min' => 'Name must be between 2 and 100 characters.',
+            'name.max' => 'Name must be between 2 and 100 characters.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'email.min' => 'Email must be between 3 and 150 characters.',
+            'email.max' => 'Email must be between 3 and 150 characters.',
+            'email.unique' => 'The email has already been taken.',
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.max' => 'Password must be at least 8 characters long.',
+            'password_confirmation.same' => 'password_confirmation must match password.',
+            'role.in' => 'Role must be one of: user, admin.',
+        ];
     }
 }

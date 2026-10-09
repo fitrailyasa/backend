@@ -7,26 +7,26 @@ const { PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } = require('../../common/utils
 class CreateUserDto {
   @ApiProperty({ type: String, example: 'John Doe', minLength: 3, maxLength: 100 })
   @Trim()
-  @IsString({ message: 'name must be a string' })
-  @MinLength(3, { message: 'name must be longer than or equal to 3 characters' })
-  @MaxLength(100, { message: 'name must be shorter than or equal to 100 characters' })
+  @IsString({ message: 'Name must be a string.' })
+  @MinLength(2, { message: 'Name must be between 2 and 100 characters.' })
+  @MaxLength(100, { message: 'Name must be between 2 and 100 characters.' })
   name;
 
   @ApiProperty({ type: String, example: 'john@example.com', maxLength: 150 })
   @LowerCase()
-  @IsEmail({}, { message: 'email must be an email' })
-  @MaxLength(150, { message: 'email must be shorter than or equal to 150 characters' })
+  @IsEmail({}, { message: 'The email must be a valid email address.' })
+  @MaxLength(150, { message: 'Email must be between 3 and 150 characters.' })
   email;
 
   @ApiProperty({ type: String, example: 'password', minLength: 8, maxLength: 72, writeOnly: true })
-  @IsString({ message: 'password must be a string' })
-  @MinLength(PASSWORD_MIN_LENGTH)
-  @MaxLength(PASSWORD_MAX_LENGTH)
+  @IsString({ message: 'Password must be a string.' })
+  @MinLength(PASSWORD_MIN_LENGTH, { message: 'Password must be at least 8 characters long.' })
+  @MaxLength(PASSWORD_MAX_LENGTH, { message: 'Password must be at least 8 characters long.' })
   password;
 
   @ApiProperty({ enum: USER_ROLES, default: 'user', required: false })
   @IsOptional()
-  @IsEnum(USER_ROLES, { message: `role must be one of the following values: ${USER_ROLES.join(', ')}` })
+  @IsEnum(USER_ROLES, { message: `Role must be one of: ${USER_ROLES.join(', ')}.` })
   role;
 }
 

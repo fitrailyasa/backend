@@ -20,14 +20,14 @@ export class QueryOrdersDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: OrderStatus })
   @IsOptional()
   @IsEnum(OrderStatus, {
-    message: `status must be one of the following values: ${Object.values(OrderStatus).join(', ')}`,
+    message: `Status must be one of: ${Object.values(OrderStatus).join(', ')}.`,
   })
   status?: OrderStatus;
 
   @ApiPropertyOptional({ description: 'Admin only, filter by owner id' })
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'user_id must be a positive integer.' })
+  @Min(1, { message: 'user_id must be a positive integer.' })
   @IsOptional()
   user_id?: number;
 }

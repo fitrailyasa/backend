@@ -19,8 +19,8 @@ import { LowerCase, Trim } from '../../common/decorators/transform.decorator';
 export class CreateProductDto {
   @ApiProperty({ example: 'MacBook Pro 14', maxLength: 150 })
   @Trim()
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Name must be a string.' })
+  @IsNotEmpty({ message: 'Name is required.' })
   @MinLength(2, { message: 'Name must be between 2 and 150 characters.' })
   @MaxLength(150, { message: 'Name must be between 2 and 150 characters.' })
   name!: string;
@@ -32,8 +32,8 @@ export class CreateProductDto {
   })
   @LowerCase()
   @IsOptional()
-  @IsString()
-  @MaxLength(180)
+  @IsString({ message: 'Slug must be a string.' })
+  @MaxLength(180, { message: 'Slug must be between 1 and 180 characters.' })
   @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers and single hyphens.' })
   slug?: string;
 

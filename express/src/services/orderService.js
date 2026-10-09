@@ -143,7 +143,7 @@ export async function updateStatus(id, status, user) {
   assertOwnership(order, user);
 
   if (!ORDER_STATUSES.includes(status)) {
-    throw ApiError.unprocessable('Validation failed', { status: [`Status must be one of: ${ORDER_STATUSES.join(', ')}`] });
+    throw ApiError.unprocessable('Validation failed', { status: [`Status must be one of: ${ORDER_STATUSES.join(', ')}.`] });
   }
 
   if (order.status === status) return order;

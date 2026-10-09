@@ -6,27 +6,26 @@ import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../common/utils/pas
 export class RegisterDto {
   @ApiProperty({ example: 'Jane Doe', maxLength: 100 })
   @Trim()
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Name must be a string.' })
+  @IsNotEmpty({ message: 'Name is required.' })
   @MinLength(2, { message: 'Name must be between 2 and 100 characters.' })
   @MaxLength(100, { message: 'Name must be between 2 and 100 characters.' })
   name!: string;
 
   @ApiProperty({ example: 'jane@example.com', maxLength: 150 })
   @LowerCase()
-  @IsEmail()
-  @MaxLength(150)
+  @IsEmail({}, { message: 'The email must be a valid email address.' })
+  @MaxLength(150, { message: 'Email must be between 3 and 150 characters.' })
   email!: string;
 
   @ApiProperty({ example: 'password', minLength: PASSWORD_MIN_LENGTH })
-  @IsString()
-  @MinLength(PASSWORD_MIN_LENGTH)
-  @MaxLength(PASSWORD_MAX_LENGTH)
+  @IsString({ message: 'Password must be a string.' })
+  @MinLength(PASSWORD_MIN_LENGTH, { message: 'Password must be at least 8 characters long.' })
+  @MaxLength(PASSWORD_MAX_LENGTH, { message: 'Password must be at least 8 characters long.' })
   password!: string;
 
   @ApiProperty({ example: 'password', description: 'Has to match the password field' })
-  @IsString()
-  @MinLength(PASSWORD_MIN_LENGTH)
-  @MaxLength(PASSWORD_MAX_LENGTH)
+  @IsString({ message: 'password_confirmation must be a string.' })
+  @IsNotEmpty({ message: 'password_confirmation is required.' })
   password_confirmation!: string;
 }

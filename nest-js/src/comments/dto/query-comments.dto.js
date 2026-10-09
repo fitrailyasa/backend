@@ -22,8 +22,8 @@ class QueryCommentsDto extends PaginationDto {
   @ApiProperty({ type: Number, example: 1, required: false })
   @IsOptional()
   @Transform(toNumber)
-  @IsInt({ message: 'product_id must be an integer number' })
-  @Min(1, { message: 'product_id must be greater than or equal to 1' })
+  @IsInt({ message: 'product_id must be a positive integer.' })
+  @Min(1, { message: 'product_id must be a positive integer.' })
   product_id;
 }
 

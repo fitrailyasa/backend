@@ -177,6 +177,52 @@ func TestRefreshAndExpiredToken(t *testing.T) {
 	}
 }
 
+func TestListQueryAndCategoryValidation(t *testing.T) {
+	s := newTestServer(t)
+	badRegister := perform(s, http.MethodPost, "/api/v1/auth/register", `{
+		"name":"A","email":"bad","password":"short","password_confirmation":"nope"
+	}`, "")
+	assertErrorFields(t, badRegister, "name", "email", "password", "password_confirmation")
+
+	listed := perform(s, http.MethodGet, "/api/v1/categories?page=0&limit=0&sort=nope&order=sideways&include=nope", "", "")
+	assertErrorFields(t, listed, "page", "limit", "sort", "order", "include")
+
+	anonymous := perform(s, http.MethodPost, "/api/v1/categories", `{"name":"Valid Name"}`, "")
+	if anonymous.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous %d %s", anonymous.Code, anonymous.Body.String())
+	}
+
+	register(t, s, "Admin", "admin@example.com")
+	if err := s.db.Model(&model.User{}).Where("email = ?", "admin@example.com").Update("role", "admin").Error; err != nil {
+		t.Fatal(err)
+	}
+	admin := login(t, s, "admin@example.com")
+	rejected := perform(s, http.MethodPost, "/api/v1/categories", `{"name":"X","slug":"Bad Slug"}`, admin)
+	assertErrorFields(t, rejected, "name", "slug")
+
+	created := perform(s, http.MethodPost, "/api/v1/categories", `{"name":"Valid Category Name"}`, admin)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create %d %s", created.Code, created.Body.String())
+	}
+	if decode(t, created)["data"].(map[string]any)["slug"] != "valid-category-name" {
+		t.Fatalf("slug %#v", decode(t, created)["data"])
+	}
+}
+
+func assertErrorFields(t *testing.T, rec *httptest.ResponseRecorder, fields ...string) {
+	t.Helper()
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status %d %s", rec.Code, rec.Body.String())
+	}
+	errors, _ := decode(t, rec)["errors"].(map[string]any)
+	for _, field := range fields {
+		value, ok := errors[field].([]any)
+		if !ok || len(value) == 0 {
+			t.Fatalf("missing %s in %#v", field, errors)
+		}
+	}
+}
+
 func register(t *testing.T, s *Server, name, email string) string {
 	t.Helper()
 	rec := perform(s, http.MethodPost, "/api/v1/auth/register", fmt.Sprintf(

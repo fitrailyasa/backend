@@ -237,3 +237,61 @@ def test_owner_cannot_set_order_to_paid(api):
     assert response.status_code == 403
     assert response.json()['success'] is False
     assert 'errors' not in response.json()
+
+
+@pytest.mark.django_db
+def test_register_list_query_and_category_writes_are_validated(api):
+    invalid = api.post(
+        '/api/v1/auth/register',
+        {
+            'name': 'A',
+            'email': 'bad',
+            'password': 'short',
+            'password_confirmation': 'nope',
+        },
+        format='json',
+    )
+    assert invalid.status_code == 422
+    for field in ('name', 'email', 'password', 'password_confirmation'):
+        assert isinstance(invalid.json()['errors'][field], list)
+
+    listed = api.get('/api/v1/categories', {
+        'page': '0',
+        'limit': '0',
+        'sort': 'nope',
+        'order': 'sideways',
+        'include': 'nope',
+    })
+    assert listed.status_code == 422
+    for field in ('page', 'limit', 'sort', 'order', 'include'):
+        assert isinstance(listed.json()['errors'][field], list)
+
+    anonymous = api.post('/api/v1/categories', {'name': 'Valid Name'}, format='json')
+    assert anonymous.status_code == 401
+
+    admin = User(name='Query Admin', email='query-admin@example.com', role='admin', password='password')
+    admin.save()
+    logged_in = api.post(
+        '/api/v1/auth/login',
+        {'email': 'query-admin@example.com', 'password': 'password'},
+        format='json',
+    )
+    token = logged_in.json()['data']['token']
+    rejected = api.post(
+        '/api/v1/categories',
+        {'name': 'X', 'slug': 'Bad Slug'},
+        format='json',
+        HTTP_AUTHORIZATION=f'Bearer {token}',
+    )
+    assert rejected.status_code == 422
+    assert isinstance(rejected.json()['errors']['name'], list)
+    assert isinstance(rejected.json()['errors']['slug'], list)
+
+    created = api.post(
+        '/api/v1/categories',
+        {'name': 'Valid Category Name'},
+        format='json',
+        HTTP_AUTHORIZATION=f'Bearer {token}',
+    )
+    assert created.status_code == 201
+    assert created.json()['data']['slug'] == 'valid-category-name'

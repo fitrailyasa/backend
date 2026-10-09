@@ -44,6 +44,8 @@
 
     <php>
         <server name="app.baseURL" value="http://example.com/"/>
+        <env name="JWT_SECRET" value="testing-secret-that-is-at-least-32-characters"/>
+        <server name="JWT_SECRET" value="testing-secret-that-is-at-least-32-characters"/>
         <server name="CODEIGNITER_SCREAM_DEPRECATIONS" value="0"/>
         <!-- Directory containing phpunit.xml -->
         <const name="HOMEPATH" value="./"/>

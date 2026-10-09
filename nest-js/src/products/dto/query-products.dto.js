@@ -18,15 +18,15 @@ class QueryProductsDto extends PaginationDto {
   @ApiProperty({ type: Number, example: 1, required: false })
   @IsOptional()
   @Transform(toNumber)
-  @IsInt({ message: 'category_id must be an integer number' })
-  @Min(1, { message: 'category_id must be greater than or equal to 1' })
+  @IsInt({ message: 'category_id must be a positive integer.' })
+  @Min(1, { message: 'category_id must be a positive integer.' })
   category_id;
 
   @ApiProperty({ type: Number, example: 1, required: false })
   @IsOptional()
   @Transform(toNumber)
-  @IsInt({ message: 'tag_id must be an integer number' })
-  @Min(1, { message: 'tag_id must be greater than or equal to 1' })
+  @IsInt({ message: 'tag_id must be a positive integer.' })
+  @Min(1, { message: 'tag_id must be a positive integer.' })
   tag_id;
 
   @ApiProperty({ type: Number, example: 'featured', required: false, description: 'Filter by tag slug' })
@@ -43,7 +43,7 @@ class QueryProductsDto extends PaginationDto {
     { maxDecimalPlaces: 2 },
     { message: 'min_price must be a number with at most 2 decimal places' },
   )
-  @Min(0, { message: 'min_price must be greater than or equal to 0' })
+  @Min(0, { message: 'min_price must be a number greater than or equal to 0.' })
   min_price;
 
   @ApiProperty({ type: Number, example: 1000, required: false })
@@ -53,7 +53,7 @@ class QueryProductsDto extends PaginationDto {
     { maxDecimalPlaces: 2 },
     { message: 'max_price must be a number with at most 2 decimal places' },
   )
-  @Min(0, { message: 'max_price must be greater than or equal to 0' })
+  @Min(0, { message: 'max_price must be a number greater than or equal to 0.' })
   max_price;
 
   @ApiProperty({

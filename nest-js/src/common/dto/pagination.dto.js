@@ -13,22 +13,22 @@ class PaginationDto {
   @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
-  @IsInt({ message: 'page must be an integer number' })
-  @Min(1, { message: 'page must be greater than or equal to 1' })
+  @IsInt({ message: 'Page must be a positive integer.' })
+  @Min(1, { message: 'Page must be a positive integer.' })
   page;
 
   @Transform(emptyToUndefined)
   @IsOptional()
   @Type(() => Number)
-  @IsInt({ message: 'limit must be an integer number' })
-  @Min(1, { message: 'limit must be greater than or equal to 1' })
-  @Max(100, { message: 'limit must be less than or equal to 100' })
+  @IsInt({ message: 'Limit must be an integer between 1 and 100.' })
+  @Min(1, { message: 'Limit must be an integer between 1 and 100.' })
+  @Max(100, { message: 'Limit must be an integer between 1 and 100.' })
   limit;
 
   @Transform(emptyToUndefined)
   @IsOptional()
-  @IsString()
-  @MaxLength(150)
+  @IsString({ message: 'Search must be a string.' })
+  @MaxLength(150, { message: 'Search must be at most 150 characters.' })
   search;
 
   @Transform(emptyToUndefined)
@@ -39,7 +39,7 @@ class PaginationDto {
 
   @Transform(emptyToUndefined)
   @IsOptional()
-  @IsIn(['asc', 'desc'], { message: 'order must be one of the following values: asc, desc' })
+  @IsIn(['asc', 'desc'], { message: 'Order must be either asc or desc.' })
   order;
 
   @Transform(emptyToUndefined)

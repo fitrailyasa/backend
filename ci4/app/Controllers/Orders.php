@@ -95,7 +95,15 @@ class Orders extends BaseController
     {
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
-        $errors = $this->validatePayload($data, ['status' => 'required|in_list[pending,paid,shipped,completed,cancelled]']);
+        $errors = $this->validatePayload($data, [
+            'status' => [
+                'rules' => 'required|in_list[pending,paid,shipped,completed,cancelled]',
+                'errors' => [
+                    'required' => 'Status is required.',
+                    'in_list' => 'Status must be one of: pending, paid, shipped, completed, cancelled.',
+                ],
+            ],
+        ]);
         if ($errors) return $this->invalid($errors);
         $orders = model(OrderModel::class, false);
         $order = $orders->find($id);

@@ -16,7 +16,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'min:3', 'max:150', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'max:72'],
             'password_confirmation' => ['required', 'string', 'same:password'],
-        ]);
+        ], $this->accountMessages());
         if ($validator->fails()) return $this->invalid($validator->errors()->toArray());
         if (User::query()->where('email', $request->input('email'))->exists()) {
             return response()->json(['success' => false, 'message' => 'Email already exists'], 409);
@@ -33,7 +33,10 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $validator = Validator::make($request->all(), ['email' => ['required', 'email'], 'password' => ['required', 'string']]);
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ], $this->accountMessages());
         if ($validator->fails()) return $this->invalid($validator->errors()->toArray());
         $user = User::query()->where('email', $request->input('email'))->first();
         if (!$user || !$user->passwordMatches((string) $request->input('password'))) {
@@ -88,6 +91,27 @@ class AuthController extends Controller
     private function publicUser(object $user): array
     {
         return ['id' => $user->id, 'name' => $user->name, 'email' => $user->email, 'role' => $user->role, 'created_at' => $user->created_at, 'updated_at' => $user->updated_at];
+    }
+
+    private function accountMessages(): array
+    {
+        return [
+            'name.required' => 'Name is required.',
+            'name.string' => 'Name must be a string.',
+            'name.min' => 'Name must be between 2 and 100 characters.',
+            'name.max' => 'Name must be between 2 and 100 characters.',
+            'email.required' => 'Email is required.',
+            'email.email' => 'The email must be a valid email address.',
+            'email.min' => 'Email must be between 3 and 150 characters.',
+            'email.max' => 'Email must be between 3 and 150 characters.',
+            'email.unique' => 'The email has already been taken.',
+            'password.required' => 'Password is required.',
+            'password.string' => 'Password must be a string.',
+            'password.min' => 'Password must be at least 8 characters long.',
+            'password.max' => 'Password must be at least 8 characters long.',
+            'password_confirmation.required' => 'password_confirmation is required.',
+            'password_confirmation.same' => 'password_confirmation must match password.',
+        ];
     }
 
     private function invalid(array $errors)

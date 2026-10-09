@@ -14,12 +14,15 @@ class Auth extends BaseController
         $validation = service('validation');
         if (!$validation->setRules([
             'name' => $this->textRule(true, 2, 100, 'Name'),
-            'email' => 'required|valid_email|min_length[3]|max_length[150]',
-            'password' => 'required|string|min_length[8]|max_length[72]',
-            'password_confirmation' => 'required|string|matches[password]',
-        ], [
-            'password_confirmation' => ['matches' => 'password_confirmation must match password.', 'required' => 'password_confirmation is required.'],
-            'password' => ['min_length' => 'Password must be at least 8 characters long.', 'max_length' => 'Password must be at least 8 characters long.'],
+            'email' => $this->emailRule(),
+            'password' => $this->passwordRule(),
+            'password_confirmation' => [
+                'rules' => 'required|string|matches[password]',
+                'errors' => [
+                    'required' => 'password_confirmation is required.',
+                    'matches' => 'password_confirmation must match password.',
+                ],
+            ],
         ])->run($data)) return $this->invalid($validation->getErrors());
         $users = model(UserModel::class, false);
         if ($users->builder()->where('email', $data['email'])->countAllResults() > 0) return $this->fail(409, 'Email already exists');
@@ -37,7 +40,10 @@ class Auth extends BaseController
         $data = $this->input();
         if (isset($data['_malformed_json'])) return $this->fail(400, 'Invalid JSON');
         $validation = service('validation');
-        if (!$validation->setRules(['email' => 'required|valid_email', 'password' => 'required|string'])->run($data)) return $this->invalid($validation->getErrors());
+        if (!$validation->setRules([
+            'email' => $this->emailRule(),
+            'password' => ['rules' => 'required|string', 'errors' => ['required' => 'Password is required.']],
+        ])->run($data)) return $this->invalid($validation->getErrors());
         $user = model(UserModel::class, false)->builder()->where('email', $data['email'])->get()->getRow();
         if (!$user || !$this->passwordMatches((string) $data['password'], (string) $user->password)) return $this->fail(401, 'These credentials do not match our records');
         return $this->issue($user);

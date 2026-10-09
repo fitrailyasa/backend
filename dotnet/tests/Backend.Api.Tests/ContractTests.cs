@@ -210,6 +210,61 @@ public sealed class ContractTests : IClassFixture<ApiFactory>
         Assert.False(paidBody.TryGetProperty("errors", out _));
     }
 
+    [Fact]
+    public async Task Register_list_query_and_category_writes_are_validated()
+    {
+        var invalid = await _client.PostAsJsonAsync("/api/v1/auth/register", new
+        {
+            name = "A",
+            email = "bad",
+            password = "short",
+            password_confirmation = "nope"
+        }, Json);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, invalid.StatusCode);
+        var invalidBody = await ReadAsync(invalid);
+        foreach (var field in new[] { "name", "email", "password", "password_confirmation" })
+        {
+            Assert.Equal(JsonValueKind.Array, invalidBody.GetProperty("errors").GetProperty(field).ValueKind);
+        }
+
+        var listed = await _client.GetAsync("/api/v1/categories?page=0&limit=0&sort=nope&order=sideways&include=nope");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, listed.StatusCode);
+        var listedErrors = (await ReadAsync(listed)).GetProperty("errors");
+        foreach (var field in new[] { "page", "limit", "sort", "order", "include" })
+        {
+            Assert.Equal(JsonValueKind.Array, listedErrors.GetProperty(field).ValueKind);
+        }
+
+        var anonymous = await _client.PostAsJsonAsync("/api/v1/categories", new { name = "Valid Name" }, Json);
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+
+        var adminEmail = $"admin-{Guid.NewGuid():N}@example.com";
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var database = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+            database.Users.Add(new User
+            {
+                Name = "Query Admin",
+                Email = adminEmail,
+                Password = hasher.Hash("password123"),
+                Role = UserRole.Admin
+            });
+            await database.SaveChangesAsync();
+        }
+
+        var token = await LoginAsync(adminEmail);
+        var rejected = await SendAsync(HttpMethod.Post, "/api/v1/categories", token, new { name = "X", slug = "Bad Slug" });
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, rejected.StatusCode);
+        var rejectedErrors = (await ReadAsync(rejected)).GetProperty("errors");
+        Assert.Equal(JsonValueKind.Array, rejectedErrors.GetProperty("name").ValueKind);
+        Assert.Equal(JsonValueKind.Array, rejectedErrors.GetProperty("slug").ValueKind);
+
+        var created = await SendAsync(HttpMethod.Post, "/api/v1/categories", token, new { name = "Valid Category Name" });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal("valid-category-name", (await ReadAsync(created)).GetProperty("data").GetProperty("slug").GetString());
+    }
+
     private async Task<HttpResponseMessage> RegisterAsync(string email) =>
         await _client.PostAsJsonAsync("/api/v1/auth/register", new
         {

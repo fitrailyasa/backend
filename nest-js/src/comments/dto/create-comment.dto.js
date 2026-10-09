@@ -6,12 +6,12 @@ class CreateCommentDto {
   @ApiProperty({
     type: String,example: 'Great keyboard, highly recommended.',
     minLength: 1,
-    maxLength: 5000,
+    maxLength: 2000,
   })
   @Trim()
-  @IsString({ message: 'body must be a string' })
-  @MinLength(1, { message: 'body should not be empty' })
-  @MaxLength(5000, { message: 'body must be shorter than or equal to 5000 characters' })
+  @IsString({ message: 'Body must be a string.' })
+  @MinLength(1, { message: 'Body must be between 1 and 2000 characters.' })
+  @MaxLength(2000, { message: 'Body must be between 1 and 2000 characters.' })
   body;
 }
 

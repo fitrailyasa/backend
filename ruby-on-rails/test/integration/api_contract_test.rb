@@ -243,4 +243,43 @@ class ApiContractTest < ActionDispatch::IntegrationTest
     assert_nil json["data"]
     assert_nil Category.find_by(id: category.id)
   end
+
+  test "register, list queries, and category writes are validated" do
+    post "/api/v1/auth/register",
+         params: { name: "A", email: "bad", password: "short", password_confirmation: "nope" },
+         as: :json
+    assert_response :unprocessable_entity
+    %w[name email password password_confirmation].each do |field|
+      assert json["errors"][field].is_a?(Array), field
+    end
+
+    get "/api/v1/categories", params: { page: 0, limit: 0, sort: "nope", order: "sideways" }
+    assert_response :unprocessable_entity
+    %w[page limit sort order].each do |field|
+      assert json["errors"][field].is_a?(Array), field
+    end
+
+    get "/api/v1/categories", params: { include: "nope" }
+    assert_response :unprocessable_entity
+    assert json["errors"]["include"].is_a?(Array)
+
+    post "/api/v1/categories", params: { name: "Valid Name" }, as: :json
+    assert_response :unauthorized
+
+    admin = User.create!(name: "Query Admin", email: "query-admin@example.com", password: "password", role: "admin")
+    post "/api/v1/categories",
+         params: { name: "X", slug: "Bad Slug" },
+         headers: auth_headers(admin),
+         as: :json
+    assert_response :unprocessable_entity
+    assert json["errors"]["name"].is_a?(Array)
+    assert json["errors"]["slug"].is_a?(Array)
+
+    post "/api/v1/categories",
+         params: { name: "Valid Category Name" },
+         headers: auth_headers(admin),
+         as: :json
+    assert_response :created
+    assert_equal "valid-category-name", json["data"]["slug"]
+  end
 end

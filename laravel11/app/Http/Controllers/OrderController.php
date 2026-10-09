@@ -92,6 +92,9 @@ class OrderController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'status' => ['required', Rule::in(['pending', 'paid', 'shipped', 'completed', 'cancelled'])],
+        ], [
+            'status.required' => 'Status is required.',
+            'status.in' => 'Status must be one of: pending, paid, shipped, completed, cancelled.',
         ]);
         if ($validator->fails()) return $this->fail(422, 'Validation failed', $validator->errors()->toArray());
 

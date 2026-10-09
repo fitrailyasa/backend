@@ -9,9 +9,9 @@ const slugProvided = (_, value) => value !== undefined && value !== null && Stri
 class CreateTagDto {
   @ApiProperty({ type: String, example: 'Featured', minLength: 2, maxLength: 60 })
   @Trim()
-  @IsString({ message: 'name must be a string' })
-  @MinLength(2, { message: 'name must be longer than or equal to 2 characters' })
-  @MaxLength(60, { message: 'name must be shorter than or equal to 60 characters' })
+  @IsString({ message: 'Name must be a string.' })
+  @MinLength(2, { message: 'Name must be between 2 and 60 characters.' })
+  @MaxLength(60, { message: 'Name must be between 2 and 60 characters.' })
   name;
 
   @ApiProperty({
@@ -22,8 +22,8 @@ class CreateTagDto {
   })
   @IsOptional()
   @ValidateIf(slugProvided)
-  @IsString({ message: 'slug must be a string' })
-  @MaxLength(80, { message: 'slug must be shorter than or equal to 80 characters' })
+  @IsString({ message: 'Slug must be a string.' })
+  @MaxLength(80, { message: 'Slug must be between 1 and 80 characters.' })
   @Matches(SLUG_RE, { message: SLUG_MESSAGE })
   slug;
 }
