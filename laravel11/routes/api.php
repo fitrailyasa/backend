@@ -16,6 +16,7 @@ Route::prefix('v1')->group(function (): void {
         'uptime' => microtime(true) - LARAVEL_START,
         'timestamp' => now()->toISOString(),
     ]));
+    Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
     Route::post('/auth/refresh', [AuthController::class, 'refresh']);
 
@@ -34,6 +35,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::get('/users/me', [AuthController::class, 'me']);
+        Route::patch('/users/me', [AuthController::class, 'updateMe']);
         Route::get('/orders', [ApiController::class, 'index'])->name('orders.index');
         Route::get('/orders/{id}', [ApiController::class, 'show'])->name('orders.show');
         Route::post('/orders', [ApiController::class, 'store'])->name('orders.store');
@@ -54,5 +56,5 @@ Route::prefix('v1')->group(function (): void {
         });
     });
     Route::get('/products/{productId}/comments', [ApiController::class, 'comments']);
-});
     Route::get('/comments', [ApiController::class, 'commentIndex']);
+});
