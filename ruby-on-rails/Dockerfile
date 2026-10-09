@@ -8,7 +8,6 @@ RUN apt-get update \
 
 COPY Gemfile Gemfile.lock ./
 COPY vendor/mysql2-pure vendor/mysql2-pure
-ENV BUNDLE_WITHOUT=test
 RUN bundle install
 
 COPY . .
