@@ -11,11 +11,7 @@ import (
 )
 
 func (s *Server) listProducts(c *gin.Context) {
-	query, ok := s.pagination(c, []string{"id", "name", "slug", "price", "stock", "category_id", "created_at", "updated_at"})
-	if !ok {
-		return
-	}
-	include, ok := s.includes(c, []string{"category", "tags"})
+	query, include, ok := s.paginationWithInclude(c, []string{"id", "name", "slug", "price", "stock", "category_id", "created_at", "updated_at"}, []string{"category", "tags"})
 	if !ok {
 		return
 	}
@@ -243,38 +239,43 @@ func (s *Server) productQuery(c *gin.Context, include map[string]bool) (*gorm.DB
 		like := likePattern(search)
 		db = db.Where("name LIKE ? OR description LIKE ?", like, like)
 	}
+	errs := fieldErrors{}
 	if raw := c.Query("category_id"); raw != "" {
 		id, err := parsePositive(raw)
 		if err != nil {
-			s.validation(c, fieldErrors{"category_id": {"category_id must be a positive integer."}})
-			return nil, false
+			errs.add("category_id", "category_id must be a positive integer.")
+		} else {
+			db = db.Where("category_id = ?", id)
 		}
-		db = db.Where("category_id = ?", id)
 	}
 	if raw := c.Query("min_price"); raw != "" {
 		price, ok := asFloat(raw)
 		if !ok || price < 0 {
-			s.validation(c, fieldErrors{"min_price": {"min_price must be a number greater than or equal to 0."}})
-			return nil, false
+			errs.add("min_price", "min_price must be a number greater than or equal to 0.")
+		} else {
+			db = db.Where("price >= ?", price)
 		}
-		db = db.Where("price >= ?", price)
 	}
 	if raw := c.Query("max_price"); raw != "" {
 		price, ok := asFloat(raw)
 		if !ok || price < 0 {
-			s.validation(c, fieldErrors{"max_price": {"max_price must be a number greater than or equal to 0."}})
-			return nil, false
+			errs.add("max_price", "max_price must be a number greater than or equal to 0.")
+		} else {
+			db = db.Where("price <= ?", price)
 		}
-		db = db.Where("price <= ?", price)
 	}
 	tagID := uint64(0)
 	if raw := c.Query("tag_id"); raw != "" {
 		id, err := parsePositive(raw)
 		if err != nil {
-			s.validation(c, fieldErrors{"tag_id": {"tag_id must be a positive integer."}})
-			return nil, false
+			errs.add("tag_id", "tag_id must be a positive integer.")
+		} else {
+			tagID = id
 		}
-		tagID = id
+	}
+	if len(errs) > 0 {
+		s.validation(c, errs)
+		return nil, false
 	}
 	tagSlug := strings.TrimSpace(c.Query("tag"))
 	if tagID > 0 || tagSlug != "" {

@@ -1,7 +1,7 @@
 import { body } from 'express-validator';
 import { idParam, paginationRules, includeRule } from './common.validator.js';
 
-export const listRules = [...paginationRules(), includeRule('products')];
+export const listRules = [...paginationRules(['id', 'name', 'slug', 'created_at', 'updated_at']), includeRule('products')];
 
 export const showRules = [...idParam('id'), includeRule('products')];
 

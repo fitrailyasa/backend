@@ -1,5 +1,5 @@
 module ApiQueries
-  def pagination_params!
+  def pagination_params!(sortable = nil)
     errors = blank_errors
     page = params[:page]
     limit = params[:limit]
@@ -22,6 +22,8 @@ module ApiQueries
     end
     if sort.present? && !sort.is_a?(String)
       errors["sort"] << "Sort must be a string."
+    elsif sortable && sort.present? && !sortable.include?(sort.to_s.strip)
+      errors["sort"] << "Sort must be one of: #{sortable.join(', ')}."
     end
     finish_validation!(errors)
 

@@ -10,11 +10,7 @@ import (
 )
 
 func (s *Server) listCategories(c *gin.Context) {
-	query, ok := s.pagination(c, []string{"id", "name", "slug", "created_at", "updated_at"})
-	if !ok {
-		return
-	}
-	include, ok := s.includes(c, []string{"products"})
+	query, include, ok := s.paginationWithInclude(c, []string{"id", "name", "slug", "created_at", "updated_at"}, []string{"products"})
 	if !ok {
 		return
 	}

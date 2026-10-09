@@ -31,6 +31,7 @@ def _category_field(*, required):
 
 
 class ProductListQuerySchema(PaginationSchema):
+    sortable = ("id", "name", "slug", "price", "stock", "category_id", "created_at", "updated_at")
     include = IncludeField(["category", "tags"])
     category_id = fields.Int(
         required=False,

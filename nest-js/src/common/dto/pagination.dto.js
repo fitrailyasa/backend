@@ -1,5 +1,5 @@
 const { Type, Transform } = require('class-transformer');
-const { IsInt, IsOptional, IsString, IsIn, Max, MaxLength, Min } = require('class-validator');
+const { IsInt, IsOptional, IsString, IsIn, Max, MaxLength, Min, ValidateBy } = require('class-validator');
 
 const emptyToUndefined = ({ value }) => {
   if (value === '' || value === null) return undefined;
@@ -49,4 +49,51 @@ class PaginationDto {
   include;
 }
 
-module.exports = { PaginationDto };
+const IsAllowedInclude = (allowed) =>
+  ValidateBy({
+    name: 'isAllowedInclude',
+    constraints: [allowed],
+    validator: {
+      validate(value, args) {
+        if (value === undefined || value === null || value === '') return true;
+        const allow = args.constraints[0];
+        return String(value)
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+          .every((entry) => allow.includes(entry));
+      },
+      defaultMessage(args) {
+        const allow = args.constraints[0] || [];
+        const invalid = String(args.value ?? '')
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+          .filter((entry) => !allow.includes(entry));
+        const allowedText = allow.length ? allow.join(', ') : 'none';
+        return `Unsupported include value(s): ${invalid.join(', ')}. Allowed: ${allowedText}.`;
+      },
+    },
+  });
+
+/**
+ * Collection query with a sort whitelist and an include whitelist.
+ * `PaginationQueryDto` stays the loose base used by DTOs that add their own fields.
+ */
+function queryDto(sortable, includes) {
+  class ResourceQueryDto extends PaginationDto {
+    @IsOptional()
+    @IsString()
+    @IsIn(sortable, { message: `Sort must be one of: ${sortable.join(', ')}.` })
+    sort;
+
+    @IsOptional()
+    @IsString()
+    @IsAllowedInclude(includes)
+    include;
+  }
+
+  return ResourceQueryDto;
+}
+
+module.exports = { PaginationDto, PaginationQueryDto: PaginationDto, queryDto, IsAllowedInclude };

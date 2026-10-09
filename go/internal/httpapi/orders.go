@@ -13,11 +13,7 @@ import (
 )
 
 func (s *Server) listOrders(c *gin.Context) {
-	query, ok := s.pagination(c, []string{"id", "status", "total", "user_id", "created_at", "updated_at"})
-	if !ok {
-		return
-	}
-	include, ok := s.includes(c, []string{"items", "items.product", "user"})
+	query, include, ok := s.paginationWithInclude(c, []string{"id", "status", "total", "user_id", "created_at", "updated_at"}, []string{"items", "items.product", "user"})
 	if !ok {
 		return
 	}

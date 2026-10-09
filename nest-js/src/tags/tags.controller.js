@@ -3,7 +3,9 @@ const { ApiTags, ApiOperation, ApiBearerAuth } = require('@nestjs/swagger');
 const { TagsService } = require('./tags.service');
 const { CreateTagDto } = require('./dto/create-tag.dto');
 const { UpdateTagDto } = require('./dto/update-tag.dto');
-const { PaginationQueryDto } = require('../common/dto/pagination.dto');
+const { queryDto } = require('../common/dto/pagination.dto');
+
+const TagQueryDto = queryDto(['id', 'name', 'slug', 'created_at', 'updated_at'], ['products']);
 const { Public } = require('../common/decorators/public.decorator');
 const { Roles } = require('../common/decorators/roles.decorator');
 const { ValidatedBody, ValidatedQuery } = require('../common/decorators/validated.decorator');
@@ -17,7 +19,7 @@ class TagsController {
   @Public()
   @Get()
   @ApiOperation({ summary: 'List tags' })
-  findAll(@ValidatedQuery(PaginationQueryDto) query) {
+  findAll(@ValidatedQuery(TagQueryDto) query) {
     return this.tagsService.findAll(query);
   }
 

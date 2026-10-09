@@ -30,9 +30,9 @@ export class OrdersController {
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() actor: AuthenticatedUser,
-    @Query('include') include?: string,
+    @Query() query: QueryOrdersDto,
   ) {
-    return this.ordersService.findOne(id, actor, include);
+    return this.ordersService.findOne(id, actor, query.include);
   }
 
   @Post()

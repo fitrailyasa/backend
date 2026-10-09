@@ -35,9 +35,13 @@ class RegisterSchema(StripSchema):
         },
     )
 
-    @validates_schema
-    def passwords_match(self, data, **kwargs):
-        if "password" in data and "password_confirmation" in data and data["password"] != data["password_confirmation"]:
+    @validates_schema(pass_original=True, skip_on_field_errors=False)
+    def passwords_match(self, data, original, **kwargs):
+        if not isinstance(original, dict):
+            return
+        password = original.get("password")
+        confirmation = original.get("password_confirmation")
+        if password != confirmation:
             raise ValidationError({"password_confirmation": ["password_confirmation must match password."]})
 
     @post_load

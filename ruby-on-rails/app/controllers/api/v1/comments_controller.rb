@@ -48,7 +48,7 @@ module Api
       private
 
       def index_all
-        paging = pagination_params!
+        paging = pagination_params!(SORTABLE)
         includes = include_params!("user", "product")
         validate_comment_filters!
         scope = Comment.all
@@ -63,7 +63,7 @@ module Api
         product_id = require_positive_int!("product_id")
         raise ApiError.new("Product with id #{product_id} not found", status: 404) unless Product.exists?(product_id)
 
-        paging = pagination_params!
+        paging = pagination_params!(SORTABLE)
         includes = include_params!("user", "product")
         scope = Comment.where(product_id: product_id)
         scope = apply_search(scope, %w[body], paging[:search])

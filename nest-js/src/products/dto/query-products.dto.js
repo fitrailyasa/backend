@@ -1,13 +1,20 @@
 const { ApiProperty } = require('@nestjs/swagger');
 const { Transform } = require('class-transformer');
-const { IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } = require('class-validator');
-const { PaginationDto } = require('../../common/dto/pagination.dto');
+const { IsIn, IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } = require('class-validator');
+const { PaginationDto, IsAllowedInclude } = require('../../common/dto/pagination.dto');
 const { Trim } = require('../../common/decorators/transform.decorator');
 
 const toNumber = ({ value }) =>
   value === undefined || value === null || value === '' ? value : Number(value);
 
+const PRODUCT_SORT = ['id', 'name', 'slug', 'price', 'stock', 'category_id', 'created_at', 'updated_at'];
+
 class QueryProductsDto extends PaginationDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(PRODUCT_SORT, { message: `Sort must be one of: ${PRODUCT_SORT.join(', ')}.` })
+  sort;
+
   @ApiProperty({ type: Number, example: 1, required: false })
   @IsOptional()
   @Transform(toNumber)
@@ -58,6 +65,7 @@ class QueryProductsDto extends PaginationDto {
   @Trim()
   @IsString({ message: 'include must be a string' })
   @MaxLength(100, { message: 'include must be shorter than or equal to 100 characters' })
+  @IsAllowedInclude(['category', 'tags'])
   include;
 }
 

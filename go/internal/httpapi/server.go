@@ -597,6 +597,11 @@ func (s *Server) bind(c *gin.Context) (map[string]any, bool) {
 }
 
 func (s *Server) pagination(c *gin.Context, sortable []string) (pageQuery, bool) {
+	query, _, ok := s.paginationWithInclude(c, sortable, nil)
+	return query, ok
+}
+
+func (s *Server) paginationWithInclude(c *gin.Context, sortable, allowed []string) (pageQuery, map[string]bool, bool) {
 	query := pageQuery{Page: 1, Limit: s.cfg.PageLimit, Sort: "id", Dir: "DESC"}
 	if !contains(sortable, "id") && len(sortable) > 0 {
 		query.Sort = sortable[0]
@@ -618,8 +623,12 @@ func (s *Server) pagination(c *gin.Context, sortable []string) (pageQuery, bool)
 			query.Limit = n
 		}
 	}
-	if raw := strings.TrimSpace(c.Query("sort")); raw != "" && contains(sortable, raw) {
-		query.Sort = raw
+	if raw := strings.TrimSpace(c.Query("sort")); raw != "" {
+		if !contains(sortable, raw) {
+			errs.add("sort", fmt.Sprintf("Sort must be one of: %s.", strings.Join(sortable, ", ")))
+		} else {
+			query.Sort = raw
+		}
 	}
 	if raw := strings.ToLower(strings.TrimSpace(c.Query("order"))); raw != "" {
 		if raw != "asc" && raw != "desc" {
@@ -631,19 +640,27 @@ func (s *Server) pagination(c *gin.Context, sortable []string) (pageQuery, bool)
 	if len(c.Query("search")) > 150 {
 		errs.add("search", "Search must be at most 150 characters.")
 	}
+	selected := map[string]bool{}
+	if allowed != nil {
+		picked, message, bad := includeSelection(c.Query("include"), allowed)
+		if bad {
+			errs.add("include", message)
+		} else {
+			selected = picked
+		}
+	}
 	if len(errs) > 0 {
 		s.validation(c, errs)
-		return query, false
+		return query, nil, false
 	}
 	query.Offset = (query.Page - 1) * query.Limit
-	return query, true
+	return query, selected, true
 }
 
-func (s *Server) includes(c *gin.Context, allowed []string) (map[string]bool, bool) {
-	raw := c.Query("include")
+func includeSelection(raw string, allowed []string) (map[string]bool, string, bool) {
 	selected := map[string]bool{}
 	if strings.TrimSpace(raw) == "" {
-		return selected, true
+		return selected, "", false
 	}
 	var invalid []string
 	allowedSet := map[string]bool{}
@@ -662,7 +679,19 @@ func (s *Server) includes(c *gin.Context, allowed []string) (map[string]bool, bo
 		selected[part] = true
 	}
 	if len(invalid) > 0 {
-		s.validation(c, fieldErrors{"include": {fmt.Sprintf("Unsupported include value(s): %s. Allowed: %s.", strings.Join(invalid, ", "), strings.Join(allowed, ", "))}})
+		allowedText := strings.Join(allowed, ", ")
+		if allowedText == "" {
+			allowedText = "none"
+		}
+		return nil, fmt.Sprintf("Unsupported include value(s): %s. Allowed: %s.", strings.Join(invalid, ", "), allowedText), true
+	}
+	return selected, "", false
+}
+
+func (s *Server) includes(c *gin.Context, allowed []string) (map[string]bool, bool) {
+	selected, message, bad := includeSelection(c.Query("include"), allowed)
+	if bad {
+		s.validation(c, fieldErrors{"include": {message}})
 		return nil, false
 	}
 	return selected, true

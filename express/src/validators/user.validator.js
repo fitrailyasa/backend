@@ -55,7 +55,7 @@ function passwordChain({ required }) {
     .withMessage('Password must be at least 8 characters long.');
 }
 
-export const listRules = [...paginationRules()];
+export const listRules = [...paginationRules(['id', 'name', 'email', 'role', 'created_at', 'updated_at'])];
 
 export const showRules = [...idParam('id')];
 

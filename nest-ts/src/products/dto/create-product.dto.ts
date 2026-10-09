@@ -12,6 +12,7 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
 } from 'class-validator';
 import { LowerCase, Trim } from '../../common/decorators/transform.decorator';
 
@@ -20,7 +21,8 @@ export class CreateProductDto {
   @Trim()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(150)
+  @MinLength(2, { message: 'Name must be between 2 and 150 characters.' })
+  @MaxLength(150, { message: 'Name must be between 2 and 150 characters.' })
   name!: string;
 
   @ApiPropertyOptional({
@@ -32,7 +34,7 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   @MaxLength(180)
-  @Matches(/^[a-z0-9-]*$/, { message: 'slug may only contain lowercase letters, numbers and dashes' })
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers and single hyphens.' })
   slug?: string;
 
   @ApiPropertyOptional({ example: '14 inch laptop with an M3 Pro chip.' })

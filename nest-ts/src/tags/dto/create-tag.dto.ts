@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { LowerCase, Trim } from '../../common/decorators/transform.decorator';
 
 export class CreateTagDto {
@@ -7,7 +7,8 @@ export class CreateTagDto {
   @Trim()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(60)
+  @MinLength(2, { message: 'Name must be between 2 and 60 characters.' })
+  @MaxLength(60, { message: 'Name must be between 2 and 60 characters.' })
   name!: string;
 
   @ApiPropertyOptional({
@@ -19,6 +20,6 @@ export class CreateTagDto {
   @IsOptional()
   @IsString()
   @MaxLength(80)
-  @Matches(/^[a-z0-9-]*$/, { message: 'slug may only contain lowercase letters, numbers and dashes' })
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers and single hyphens.' })
   slug?: string;
 }

@@ -7,15 +7,18 @@ const {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } = require('class-validator');
-const { slugify } = require('../../common/utils/slugify');
 const { Trim } = require('../../common/decorators/transform.decorator');
 
-const toSlug = ({ value }) => (typeof value === 'string' ? slugify(value) : value);
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SLUG_MESSAGE = 'Slug may only contain lowercase letters, numbers and single hyphens.';
+const slugProvided = (_, value) => value !== undefined && value !== null && String(value).trim() !== '';
 const toNumber = ({ value }) =>
   value === undefined || value === null || value === '' ? value : Number(value);
 
@@ -64,9 +67,10 @@ class CreateProductDto {
     description: 'Generated from name when omitted',
   })
   @IsOptional()
-  @Transform(toSlug)
+  @ValidateIf(slugProvided)
   @IsString({ message: 'slug must be a string' })
   @MaxLength(180, { message: 'slug must be shorter than or equal to 180 characters' })
+  @Matches(SLUG_RE, { message: SLUG_MESSAGE })
   slug;
 
   @ApiProperty({ example: [1, 2], type: [Number], required: false })
@@ -81,4 +85,4 @@ class CreateProductDto {
 
 class UpdateProductDto extends PartialType(CreateProductDto) {}
 
-module.exports = { CreateProductDto, UpdateProductDto, toSlug, toNumber };
+module.exports = { CreateProductDto, UpdateProductDto, toNumber };

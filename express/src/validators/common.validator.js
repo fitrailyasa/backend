@@ -17,7 +17,7 @@ export function uniqueIn(Model, field, { message, exceptFromParams = 'id' } = {}
   };
 }
 
-export const paginationRules = () => [
+export const paginationRules = (sortable = []) => [
   query('page').optional().isInt({ min: 1, max: 100000 }).withMessage('Page must be a positive integer.').toInt(),
   query('limit')
     .optional()
@@ -25,7 +25,18 @@ export const paginationRules = () => [
     .withMessage(`Limit must be an integer between 1 and ${env.pagination.maxLimit}.`)
     .toInt(),
   query('search').optional().isString().withMessage('Search must be a string.').trim().isLength({ max: 150 }),
-  query('sort').optional().isString().withMessage('Sort must be a string.').trim(),
+  query('sort')
+    .optional()
+    .isString()
+    .withMessage('Sort must be a string.')
+    .bail()
+    .trim()
+    .custom((value) => {
+      if (sortable.length > 0 && !sortable.includes(value)) {
+        throw new Error(`Sort must be one of: ${sortable.join(', ')}.`);
+      }
+      return true;
+    }),
   query('order').optional().isString().withMessage('Order must be a string.').trim().toLowerCase().isIn(['asc', 'desc']).withMessage('Order must be either asc or desc.'),
 ];
 

@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { CategoryListQueryDto } from '../common/dto/pagination.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { ResponseMessage } from '../common/decorators/response-message.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -25,7 +25,7 @@ export class CategoriesController {
     enum: CATEGORY_INCLUDES,
     description: 'Comma separated relations to eager load',
   })
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: CategoryListQueryDto) {
     return this.categoriesService.findAll(query);
   }
 
@@ -35,8 +35,8 @@ export class CategoriesController {
   @ApiParam({ name: 'id', type: Number })
   @ApiQuery({ name: 'include', required: false, enum: CATEGORY_INCLUDES })
   @ApiOperation({ summary: 'Get a single category' })
-  findOne(@Param('id', ParseIntPipe) id: number, @Query('include') include?: string) {
-    return this.categoriesService.findOne(id, include);
+  findOne(@Param('id', ParseIntPipe) id: number, @Query() query: CategoryListQueryDto) {
+    return this.categoriesService.findOne(id, query.include);
   }
 
   @Post()

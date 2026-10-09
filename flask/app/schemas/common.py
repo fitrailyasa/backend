@@ -64,6 +64,8 @@ def optional_slug(max_length):
 
 
 class PaginationSchema(StripSchema):
+    sortable = None
+
     page = fields.Int(
         load_default=1,
         validate=Range(min=1, max=100000, error="Page must be a positive integer."),
@@ -114,6 +116,15 @@ class PaginationSchema(StripSchema):
         if not isinstance(data.get("include"), list):
             data["include"] = []
         return data
+
+    @validates("sort")
+    def validate_sort(self, value, **kwargs):
+        allowed = getattr(type(self), "sortable", None)
+        if not allowed or value in (None, ""):
+            return
+        if value not in allowed:
+            names = ", ".join(sorted(allowed))
+            raise ValidationError(f"Sort must be one of: {names}.")
 
     @validates("limit")
     def validate_limit(self, value, **kwargs):

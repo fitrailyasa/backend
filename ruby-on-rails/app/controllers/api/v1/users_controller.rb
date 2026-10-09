@@ -5,7 +5,7 @@ module Api
       before_action :require_admin!, except: %i[me update_me]
 
       def index
-        paging = pagination_params!
+        paging = pagination_params!(%w[id name email role created_at updated_at])
         scope = apply_search(User.all, %w[name email], paging[:search])
         if params[:role].present?
           unless User::ROLES.include?(params[:role].to_s)

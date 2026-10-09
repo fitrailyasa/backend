@@ -6,7 +6,7 @@ module Api
       SORTABLE = %w[id name slug price stock category_id created_at updated_at].freeze
 
       def index
-        paging = pagination_params!
+        paging = pagination_params!(SORTABLE)
         includes = include_params!("category", "tags")
         validate_product_filters!
         scope = Product.all

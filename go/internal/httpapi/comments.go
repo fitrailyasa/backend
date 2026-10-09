@@ -31,11 +31,7 @@ func (s *Server) listProductComments(c *gin.Context) {
 }
 
 func (s *Server) comments(c *gin.Context, productID uint64) {
-	query, ok := s.pagination(c, []string{"id", "body", "product_id", "user_id", "created_at", "updated_at"})
-	if !ok {
-		return
-	}
-	include, ok := s.includes(c, []string{"user", "product"})
+	query, include, ok := s.paginationWithInclude(c, []string{"id", "body", "product_id", "user_id", "created_at", "updated_at"}, []string{"user", "product"})
 	if !ok {
 		return
 	}

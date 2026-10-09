@@ -4,7 +4,7 @@ module Api
       before_action :require_admin!, only: %i[create update destroy]
 
       def index
-        paging = pagination_params!
+        paging = pagination_params!(%w[id name slug created_at updated_at])
         includes = include_params!("products")
         scope = apply_search(Category.all, %w[name description], paging[:search])
         rows, meta = paginate(scope, paging: paging, sortable: %w[id name slug created_at updated_at], preload: includes.include?("products") ? [:products] : nil)

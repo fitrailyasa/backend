@@ -30,8 +30,8 @@ export class ProductsController {
   @ApiParam({ name: 'id', type: Number })
   @ApiQuery({ name: 'include', required: false, enum: PRODUCT_INCLUDES })
   @ApiOperation({ summary: 'Get a single product' })
-  findOne(@Param('id', ParseIntPipe) id: number, @Query('include') include?: string) {
-    return this.productsService.findOne(id, include);
+  findOne(@Param('id', ParseIntPipe) id: number, @Query() query: QueryProductsDto) {
+    return this.productsService.findOne(id, query.include);
   }
 
   @Post()

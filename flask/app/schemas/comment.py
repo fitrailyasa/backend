@@ -7,6 +7,7 @@ from app.schemas.common import IncludeField, PaginationSchema, StripSchema
 
 
 class CommentListQuerySchema(PaginationSchema):
+    sortable = ("id", "body", "product_id", "user_id", "created_at", "updated_at")
     include = IncludeField(["user", "product"])
     product_id = fields.Int(
         required=False,

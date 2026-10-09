@@ -8,7 +8,7 @@ module Api
       INCLUDES = %w[items items.product user].freeze
 
       def index
-        paging = pagination_params!
+        paging = pagination_params!(SORTABLE)
         includes = include_params!(*INCLUDES)
         validate_filters!
         if params[:user_id].present? && !current_user.admin?

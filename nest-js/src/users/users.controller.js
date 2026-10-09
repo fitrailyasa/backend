@@ -3,7 +3,9 @@ const { ApiTags, ApiOperation, ApiBearerAuth } = require('@nestjs/swagger');
 const { UsersService } = require('./users.service');
 const { CreateUserDto } = require('./dto/create-user.dto');
 const { UpdateUserDto } = require('./dto/update-user.dto');
-const { PaginationQueryDto } = require('../common/dto/pagination.dto');
+const { queryDto } = require('../common/dto/pagination.dto');
+
+const UserQueryDto = queryDto(['id', 'name', 'email', 'role', 'created_at', 'updated_at'], []);
 const { Roles } = require('../common/decorators/roles.decorator');
 const { CurrentUser } = require('../common/decorators/current-user.decorator');
 const { ValidatedBody, ValidatedQuery } = require('../common/decorators/validated.decorator');
@@ -30,7 +32,7 @@ class UsersController {
   @Roles('admin')
   @Get()
   @ApiOperation({ summary: 'List users (admin only)' })
-  findAll(@ValidatedQuery(PaginationQueryDto) query) {
+  findAll(@ValidatedQuery(UserQueryDto) query) {
     return this.usersService.findAll(query);
   }
 

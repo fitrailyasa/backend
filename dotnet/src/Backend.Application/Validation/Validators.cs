@@ -39,6 +39,13 @@ public static class IncludeRules
             context.AddFailure("include", $"Unsupported include value(s): {string.Join(", ", invalid)}. Allowed: {string.Join(", ", allowed)}.");
         });
     }
+
+    public static void Sort<T>(AbstractValidator<T> validator, params string[] allowed) where T : PageQuery
+    {
+        validator.RuleFor(x => x.Sort)
+            .Must(sort => string.IsNullOrWhiteSpace(sort) || allowed.Contains(sort, StringComparer.OrdinalIgnoreCase))
+            .WithMessage($"Sort must be one of: {string.Join(", ", allowed)}.");
+    }
 }
 
 public sealed class RegisterValidator : AbstractValidator<RegisterRequest>
@@ -115,6 +122,7 @@ public sealed class UserListValidator : AbstractValidator<UserListQuery>
     public UserListValidator()
     {
         IncludeRules.Apply(this);
+        IncludeRules.Sort(this, "id", "name", "email", "role", "created_at", "updated_at");
         RuleFor(x => x.Role)
             .Must(role => string.IsNullOrWhiteSpace(role) || ApiValues.Roles.Contains(role))
             .WithMessage($"Role must be one of: {string.Join(", ", ApiValues.Roles)}.");
@@ -145,7 +153,11 @@ public sealed class CreateCategoryValidator : AbstractValidator<CreateCategoryRe
 
 public sealed class CategoryListValidator : AbstractValidator<CategoryListQuery>
 {
-    public CategoryListValidator() => IncludeRules.Apply(this, "products");
+    public CategoryListValidator()
+    {
+        IncludeRules.Apply(this, "products");
+        IncludeRules.Sort(this, "id", "name", "slug", "created_at", "updated_at");
+    }
 }
 
 public sealed class CreateTagValidator : AbstractValidator<CreateTagRequest>
@@ -165,7 +177,11 @@ public sealed class CreateTagValidator : AbstractValidator<CreateTagRequest>
 
 public sealed class TagListValidator : AbstractValidator<TagListQuery>
 {
-    public TagListValidator() => IncludeRules.Apply(this, "products");
+    public TagListValidator()
+    {
+        IncludeRules.Apply(this, "products");
+        IncludeRules.Sort(this, "id", "name", "slug", "created_at", "updated_at");
+    }
 }
 
 public sealed class CreateProductValidator : AbstractValidator<CreateProductRequest>
@@ -203,6 +219,7 @@ public sealed class ProductListValidator : AbstractValidator<ProductListQuery>
     public ProductListValidator()
     {
         IncludeRules.Apply(this, "category", "tags");
+        IncludeRules.Sort(this, "id", "name", "slug", "price", "stock", "category_id", "created_at", "updated_at");
         RuleFor(x => x.CategoryId).Must(id => id is null or > 0).WithMessage("category_id must be a positive integer.");
         RuleFor(x => x.TagId).Must(id => id is null or > 0).WithMessage("tag_id must be a positive integer.");
         RuleFor(x => x.MinPrice).Must(price => price is null or >= 0).WithMessage("min_price must be a number greater than or equal to 0.");
@@ -261,6 +278,7 @@ public sealed class OrderListValidator : AbstractValidator<OrderListQuery>
     public OrderListValidator()
     {
         IncludeRules.Apply(this, "items", "items.product", "user");
+        IncludeRules.Sort(this, "id", "status", "total", "user_id", "created_at", "updated_at");
         RuleFor(x => x.Status)
             .Must(status => string.IsNullOrWhiteSpace(status) || ApiValues.OrderStatuses.Contains(status))
             .WithMessage($"Status must be one of: {string.Join(", ", ApiValues.OrderStatuses)}.");
@@ -284,6 +302,7 @@ public sealed class CommentListValidator : AbstractValidator<CommentListQuery>
     public CommentListValidator()
     {
         IncludeRules.Apply(this, "user", "product");
+        IncludeRules.Sort(this, "id", "body", "product_id", "user_id", "created_at", "updated_at");
         RuleFor(x => x.ProductId).Must(id => id is null or > 0).WithMessage("product_id must be a positive integer.");
         RuleFor(x => x.UserId).Must(id => id is null or > 0).WithMessage("user_id must be a positive integer.");
     }

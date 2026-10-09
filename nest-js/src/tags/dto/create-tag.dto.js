@@ -1,10 +1,10 @@
 const { ApiProperty, PartialType } = require('@nestjs/swagger');
-const { Transform } = require('class-transformer');
-const { IsOptional, IsString, MaxLength, MinLength } = require('class-validator');
-const { slugify } = require('../../common/utils/slugify');
+const { IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } = require('class-validator');
 const { Trim } = require('../../common/decorators/transform.decorator');
 
-const toSlug = ({ value }) => (typeof value === 'string' ? slugify(value) : value);
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SLUG_MESSAGE = 'Slug may only contain lowercase letters, numbers and single hyphens.';
+const slugProvided = (_, value) => value !== undefined && value !== null && String(value).trim() !== '';
 
 class CreateTagDto {
   @ApiProperty({ type: String, example: 'Featured', minLength: 2, maxLength: 60 })
@@ -21,9 +21,10 @@ class CreateTagDto {
     description: 'Generated from name when omitted',
   })
   @IsOptional()
-  @Transform(toSlug)
+  @ValidateIf(slugProvided)
   @IsString({ message: 'slug must be a string' })
   @MaxLength(80, { message: 'slug must be shorter than or equal to 80 characters' })
+  @Matches(SLUG_RE, { message: SLUG_MESSAGE })
   slug;
 }
 

@@ -14,9 +14,14 @@ def build_meta(total, page, limit):
 
 
 def resolve_sort(sort, allowed, default="id"):
-    if sort in allowed:
-        return sort
-    return default if default in allowed else next(iter(allowed))
+    if not sort:
+        return default if default in allowed else next(iter(allowed))
+    if sort not in allowed:
+        from app.common.errors import ApiError
+
+        names = ", ".join(sorted(allowed))
+        raise ApiError(422, "Validation failed", errors={"sort": [f"Sort must be one of: {names}."]})
+    return sort
 
 
 def count_stmt(stmt):

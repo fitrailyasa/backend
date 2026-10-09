@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { LowerCase, Trim } from '../../common/decorators/transform.decorator';
 
 export class CreateCategoryDto {
@@ -7,7 +7,8 @@ export class CreateCategoryDto {
   @Trim()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
+  @MinLength(2, { message: 'Name must be between 2 and 100 characters.' })
+  @MaxLength(100, { message: 'Name must be between 2 and 100 characters.' })
   name!: string;
 
   @ApiPropertyOptional({
@@ -19,7 +20,7 @@ export class CreateCategoryDto {
   @IsOptional()
   @IsString()
   @MaxLength(120)
-  @Matches(/^[a-z0-9-]*$/, { message: 'slug may only contain lowercase letters, numbers and dashes' })
+  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, { message: 'Slug may only contain lowercase letters, numbers and single hyphens.' })
   slug?: string;
 
   @ApiPropertyOptional({ example: 'Phones, laptops and every other gadget.' })

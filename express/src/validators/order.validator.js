@@ -3,7 +3,7 @@ import { ORDER_STATUSES } from '../models/Order.js';
 import { idParam, paginationRules, includeRule, orderStatusRule } from './common.validator.js';
 
 export const listRules = [
-  ...paginationRules(),
+  ...paginationRules(['id', 'status', 'total', 'user_id', 'created_at', 'updated_at']),
   includeRule('items', 'items.product', 'user'),
   query('status')
     .optional()

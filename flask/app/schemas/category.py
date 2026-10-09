@@ -7,6 +7,7 @@ from app.schemas.common import IncludeField, PaginationSchema, StripSchema, opti
 
 
 class CategoryListQuerySchema(PaginationSchema):
+    sortable = ("id", "name", "slug", "created_at", "updated_at")
     include = IncludeField(["products"])
 
 

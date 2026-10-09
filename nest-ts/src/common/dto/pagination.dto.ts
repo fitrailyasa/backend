@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, ValidateBy, ValidationArguments } from 'class-validator';
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
@@ -67,4 +67,74 @@ export class PaginationQueryDto {
   get take(): number {
     return this.limit;
   }
+}
+
+export function IsAllowedInclude(allowed: readonly string[]) {
+  return ValidateBy({
+    name: 'isAllowedInclude',
+    constraints: [allowed],
+    validator: {
+      validate(value: unknown, args?: ValidationArguments) {
+        if (value === undefined || value === null || value === '') return true;
+        const allow = (args?.constraints?.[0] as string[]) ?? [];
+        return String(value)
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+          .every((entry) => allow.includes(entry));
+      },
+      defaultMessage(args?: ValidationArguments) {
+        const allow = (args?.constraints?.[0] as string[]) ?? [];
+        const invalid = String(args?.value ?? '')
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+          .filter((entry) => !allow.includes(entry));
+        const allowedText = allow.length ? allow.join(', ') : 'none';
+        return `Unsupported include value(s): ${invalid.join(', ')}. Allowed: ${allowedText}.`;
+      },
+    },
+  });
+}
+
+function sortColumn(allowed: readonly string[]) {
+  return IsIn(allowed as string[], { message: `Sort must be one of: ${allowed.join(', ')}.` });
+}
+
+const NAME_SORT = ['id', 'name', 'slug', 'created_at', 'updated_at'] as const;
+
+export class CategoryListQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  @sortColumn(NAME_SORT)
+  override sort?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsAllowedInclude(['products'])
+  override include?: string;
+}
+
+export class TagListQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  @sortColumn(NAME_SORT)
+  override sort?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsAllowedInclude(['products'])
+  override include?: string;
+}
+
+export class UserListQueryDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  @sortColumn(['id', 'name', 'email', 'role', 'created_at', 'updated_at'])
+  override sort?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsAllowedInclude([])
+  override include?: string;
 }

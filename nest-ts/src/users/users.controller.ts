@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { UserListQueryDto } from '../common/dto/pagination.dto';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { ResponseMessage } from '../common/decorators/response-message.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -43,7 +43,7 @@ export class UsersController {
   @Roles('admin')
   @ResponseMessage('Users retrieved')
   @ApiOperation({ summary: 'List users (admin only)' })
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: UserListQueryDto) {
     return this.usersService.findAll(query);
   }
 

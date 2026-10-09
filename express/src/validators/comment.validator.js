@@ -2,7 +2,7 @@ import { body, query } from 'express-validator';
 import { idParam, paginationRules, includeRule } from './common.validator.js';
 
 export const listRules = [
-  ...paginationRules(),
+  ...paginationRules(['id', 'body', 'product_id', 'user_id', 'created_at', 'updated_at']),
   includeRule('user', 'product'),
   query('product_id').optional().isInt({ min: 1 }).withMessage('product_id must be a positive integer.').toInt(),
   query('user_id').optional().isInt({ min: 1 }).withMessage('user_id must be a positive integer.').toInt(),
@@ -10,7 +10,7 @@ export const listRules = [
 
 export const listByProductRules = [
   ...idParam('productId'),
-  ...paginationRules(),
+  ...paginationRules(['id', 'body', 'product_id', 'user_id', 'created_at', 'updated_at']),
   includeRule('user', 'product'),
   query('product_id').optional().isInt({ min: 1 }).withMessage('product_id must be a positive integer.').toInt(),
 ];

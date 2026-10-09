@@ -10,6 +10,7 @@ _STATUS_MESSAGE = f"Status must be one of: {', '.join(ORDER_STATUSES)}."
 
 
 class OrderListQuerySchema(PaginationSchema):
+    sortable = ("id", "status", "total", "user_id", "created_at", "updated_at")
     include = IncludeField(["items", "items.product", "user"])
     status = fields.String(
         required=False,

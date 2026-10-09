@@ -50,6 +50,7 @@ def _role_field():
 
 
 class UserListQuerySchema(PaginationSchema):
+    sortable = ("id", "name", "email", "role", "created_at", "updated_at")
     role = fields.String(required=False)
 
 

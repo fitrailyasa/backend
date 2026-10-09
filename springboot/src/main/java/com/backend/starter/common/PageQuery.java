@@ -65,6 +65,8 @@ public final class PageQuery {
             String mapped = sortable.get(rawSort);
             if (mapped != null) {
                 sortProperty = mapped;
+            } else {
+                errors.add("sort", "Sort must be one of: " + String.join(", ", sortable.keySet()) + ".");
             }
         }
         String rawOrder = blankToNull(params.get("order"));

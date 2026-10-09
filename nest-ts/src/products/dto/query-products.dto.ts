@@ -1,9 +1,21 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
-import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsAllowedInclude, PaginationQueryDto } from '../../common/dto/pagination.dto';
+
+const PRODUCT_SORT = ['id', 'name', 'slug', 'price', 'stock', 'category_id', 'created_at', 'updated_at'] as const;
 
 export class QueryProductsDto extends PaginationQueryDto {
+  @IsOptional()
+  @IsString()
+  @IsIn(PRODUCT_SORT, { message: `Sort must be one of: ${PRODUCT_SORT.join(', ')}.` })
+  override sort?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsAllowedInclude(['category', 'tags'])
+  override include?: string;
+
   @ApiPropertyOptional({ description: 'Filter by category id' })
   @Type(() => Number)
   @IsInt()

@@ -9,7 +9,8 @@ export class CreateUserDto {
   @Trim()
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
+  @MinLength(2, { message: 'Name must be between 2 and 100 characters.' })
+  @MaxLength(100, { message: 'Name must be between 2 and 100 characters.' })
   name!: string;
 
   @ApiProperty({ example: 'jane@example.com', maxLength: 150 })

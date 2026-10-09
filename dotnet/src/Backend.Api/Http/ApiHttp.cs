@@ -38,7 +38,7 @@ public static class ApiResults
 
 public static class ApiErrors
 {
-    public static IActionResult FromModelState(ModelStateDictionary modelState)
+    public static IActionResult FromModelState(ModelStateDictionary modelState, HttpRequest? request = null)
     {
         var entries = modelState.Where(entry => entry.Value?.Errors.Count > 0).ToList();
         var bodyLevel = entries.Any(entry =>
@@ -57,6 +57,12 @@ public static class ApiErrors
         var errors = entries.ToDictionary(
             entry => ToField(entry.Key),
             entry => entry.Value!.Errors.Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage) ? "The value is invalid." : error.ErrorMessage).ToArray());
+
+        if (request is not null)
+        {
+            AddNonNegative(errors, request, "min_price");
+            AddNonNegative(errors, request, "max_price");
+        }
 
         return new UnprocessableEntityObjectResult(new ErrorBody
         {
@@ -94,6 +100,25 @@ public static class ApiErrors
         }
 
         return JsonNamingPolicy.SnakeCaseLower.ConvertName(leaf);
+    }
+
+    private static void AddNonNegative(Dictionary<string, string[]> errors, HttpRequest request, string field)
+    {
+        if (errors.ContainsKey(field) || !request.Query.TryGetValue(field, out var raw))
+        {
+            return;
+        }
+
+        var text = raw.ToString().Trim();
+        if (text.Length == 0)
+        {
+            return;
+        }
+
+        if (!decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) || number < 0)
+        {
+            errors[field] = [$"{field} must be a number greater than or equal to 0."];
+        }
     }
 }
 

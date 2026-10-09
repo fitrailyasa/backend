@@ -57,6 +57,8 @@ def parse_list_query(params, sortable, include_allowed=None, errors=None):
         raw = str(params.get('sort')).strip()
         if raw in sortable:
             sort = raw
+        else:
+            errors['sort'] = [f"Sort must be one of: {', '.join(sortable)}."]
 
     order = 'desc'
     if _present(params, 'order'):

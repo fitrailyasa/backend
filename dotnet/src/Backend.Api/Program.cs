@@ -35,7 +35,7 @@ builder.Services.AddControllers(options => options.Filters.Add(typeof(Validation
 
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
-    options.InvalidModelStateResponseFactory = context => ApiErrors.FromModelState(context.ModelState);
+    options.InvalidModelStateResponseFactory = context => ApiErrors.FromModelState(context.ModelState, context.HttpContext.Request);
 });
 
 var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();

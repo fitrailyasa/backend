@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { PaginationQueryDto } from '../common/dto/pagination.dto';
+import { TagListQueryDto } from '../common/dto/pagination.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { ResponseMessage } from '../common/decorators/response-message.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -19,7 +19,7 @@ export class TagsController {
   @Get()
   @ResponseMessage('Tags retrieved')
   @ApiOperation({ summary: 'List tags' })
-  findAll(@Query() query: PaginationQueryDto) {
+  findAll(@Query() query: TagListQueryDto) {
     return this.tagsService.findAll(query);
   }
 
