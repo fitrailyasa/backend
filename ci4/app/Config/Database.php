@@ -194,12 +194,17 @@ class Database extends Config
     {
         parent::__construct();
 
-        $this->default['hostname'] = env('database.default.hostname', '127.0.0.1');
-        $this->default['username'] = env('database.default.username', 'root');
-        $this->default['password'] = env('database.default.password', '');
-        $this->default['database'] = env('database.default.database', 'backend_starter');
-        $this->default['DBDriver'] = env('database.default.DBDriver', 'MySQLi');
-        $this->default['port'] = (int) env('database.default.port', 3306);
+        // Prefer CodeIgniter's database.default.* keys, then the DB_* names
+        // every other app in this repo already uses (Go, Laravel, Express, …).
+        $this->default['hostname'] = $this->envString(['database.default.hostname', 'DB_HOST'], '127.0.0.1');
+        $this->default['username'] = $this->envString(['database.default.username', 'DB_USERNAME', 'DB_USER'], 'root');
+        $this->default['password'] = $this->envString(['database.default.password', 'DB_PASSWORD'], '');
+        $this->default['database'] = $this->envString(['database.default.database', 'DB_DATABASE', 'DB_NAME'], 'backend_starter');
+        $this->default['DBDriver'] = $this->mysqlDriver(
+            $this->envString(['database.default.DBDriver', 'DB_CONNECTION', 'DB_DIALECT'], 'MySQLi'),
+        );
+        $port = $this->envString(['database.default.port', 'DB_PORT'], '3306');
+        $this->default['port'] = (int) ($port !== '' ? $port : 3306);
 
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
@@ -207,5 +212,32 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
+    }
+
+    /**
+     * First non-missing environment value. An empty string is kept, so a blank
+     * database password still wins over a later key.
+     *
+     * @param list<string> $keys
+     */
+    private function envString(array $keys, string $default): string
+    {
+        foreach ($keys as $key) {
+            $value = env($key);
+
+            if (is_string($value)) {
+                return $value;
+            }
+        }
+
+        return $default;
+    }
+
+    private function mysqlDriver(string $driver): string
+    {
+        return match (strtolower($driver)) {
+            'mysql', 'mysqli' => 'MySQLi',
+            default           => $driver !== '' ? $driver : 'MySQLi',
+        };
     }
 }
