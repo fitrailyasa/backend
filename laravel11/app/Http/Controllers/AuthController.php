@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Support\JwtToken;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -25,7 +24,7 @@ class AuthController extends Controller
         $user = User::query()->create([
             'name' => $request->input('name'),
             'email' => $request->input('email'),
-            'password' => Hash::make($request->input('password')),
+            'password' => password_hash((string) $request->input('password'), PASSWORD_BCRYPT),
             'role' => 'user',
         ]);
         return $this->tokenResponse($user->fresh()->toRawObject(), 201);
@@ -36,7 +35,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), ['email' => ['required', 'email'], 'password' => ['required', 'string']]);
         if ($validator->fails()) return $this->invalid($validator->errors()->toArray());
         $user = User::query()->where('email', $request->input('email'))->first();
-        if (!$user || !Hash::check($request->input('password'), (string) $user->getRawOriginal()['password'])) {
+        if (!$user || !$user->passwordMatches((string) $request->input('password'))) {
             return response()->json(['success' => false, 'message' => 'These credentials do not match our records'], 401);
         }
         return $this->tokenResponse($user->toRawObject());

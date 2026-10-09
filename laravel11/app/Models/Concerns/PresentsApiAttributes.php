@@ -19,6 +19,11 @@ trait PresentsApiAttributes
     {
         $data = (array) $this->toRawObject();
         unset($data['password'], $data['remember_token'], $data['email_verified_at']);
+        foreach (array_keys($data) as $key) {
+            if (str_starts_with((string) $key, 'pivot_')) {
+                unset($data[$key]);
+            }
+        }
         return $data;
     }
 }

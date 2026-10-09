@@ -40,4 +40,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Comment::class);
     }
+
+    public function passwordMatches(string $plain): bool
+    {
+        $hash = (string) ($this->getRawOriginal()['password'] ?? '');
+        if (str_starts_with($hash, 'bcrypt$')) {
+            $hash = substr($hash, strlen('bcrypt$'));
+        }
+
+        return $hash !== '' && password_verify($plain, $hash);
+    }
 }

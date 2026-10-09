@@ -2,8 +2,9 @@ from django.db import IntegrityError
 from django.db.models.deletion import RestrictedError
 
 from apps.core.exceptions import ApiError
+from apps.core.listing import raise_if_errors
 from apps.core.slugify import slugify
-from apps.core.validate import add_slug, add_string, raise_if_errors, require_dict
+from apps.core.validate import add_slug, add_string, require_dict
 
 
 def _get(model, pk, label):

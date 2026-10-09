@@ -39,6 +39,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'api-auth'      => ApiAuthFilter::class,
         'api-admin'     => ApiAdminFilter::class,
+        'normalize-json' => NormalizeJsonFilter::class,
     ];
 
     /**
@@ -81,6 +82,7 @@ class Filters extends BaseFilters
             // 'invalidchars',
         ],
         'after' => [
+            'normalize-json',
             'toolbar' => ['except' => ['api/v1/docs', 'api/v1/docs/*', 'swagger-ui/*']],
         ],
     ];
