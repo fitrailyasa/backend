@@ -184,13 +184,13 @@ services:
       - "8081:8081"
     environment:
       CI_ENVIRONMENT: development
-      app.baseURL: http://ci4.${DOMAIN:-example.com}/
-      database.default.hostname: mysql
-      database.default.database: backend_starter
-      database.default.username: root
-      database.default.password: secret
-      database.default.DBDriver: MySQLi
-      database.default.port: 3306
+      API_BASE_URL: http://ci4.${DOMAIN:-example.com}
+      DB_DIALECT: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: backend_starter
+      DB_USER: root
+      DB_PASSWORD: secret
       JWT_SECRET: change-me-to-a-long-random-string-at-least-32-chars
       JWT_EXPIRES_IN: 3600
       JWT_REFRESH_EXPIRES_IN: 604800
