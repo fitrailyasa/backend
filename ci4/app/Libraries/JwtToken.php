@@ -35,7 +35,7 @@ class JwtToken
             $claims = json_decode(self::decodePart($payload), true, 512, JSON_THROW_ON_ERROR);
             if (!is_array($claims) || (int) ($claims['exp'] ?? 0) <= time()) return null;
             if ($type !== null && ($claims['token_type'] ?? null) !== $type) return null;
-            if (cache()->get('jwt_blacklist_' . ($claims['jti'] ?? ''))) return null;
+            if (cache()->get(self::blacklistKey($claims['jti'] ?? ''))) return null;
             return $claims;
         } catch (Throwable) {
             return null;
@@ -44,7 +44,12 @@ class JwtToken
 
     public static function revoke(array $claims): void
     {
-        cache()->save('jwt:blacklist:' . $claims['jti'], true, max(1, (int) $claims['exp'] - time()));
+        cache()->save(self::blacklistKey($claims['jti'] ?? ''), true, max(1, (int) $claims['exp'] - time()));
+    }
+
+    private static function blacklistKey(string $jti): string
+    {
+        return 'jwt_blacklist_' . $jti;
     }
 
     private static function secret(): string
