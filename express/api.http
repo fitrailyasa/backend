@@ -4,7 +4,7 @@
 # 2. Send "Login admin" and "Login user" first. Tokens are filled from those responses.
 # 3. Ids below assume the seed result (admin = 1, user = 2, categories/products/tags start at 1).
 
-@host = http://localhost:3000
+@host = http://localhost:3004
 @baseUrl = {{host}}/api/v1
 @categoryId = 1
 @productId = 1
