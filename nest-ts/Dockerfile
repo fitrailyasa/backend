@@ -22,6 +22,7 @@ ENV PORT=3003
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/openapi.json ./openapi.json
 
 EXPOSE 3003
 
