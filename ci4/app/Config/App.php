@@ -184,6 +184,18 @@ class App extends BaseConfig
 
     /**
      * --------------------------------------------------------------------------
+     * Trust Proxy Headers
+     * --------------------------------------------------------------------------
+     *
+     * When true, the X-Forwarded-For header is honoured so the client IP (and
+     * the IP rate limits that key on it) is correct behind a reverse proxy.
+     * Off by default because the header is client-controlled when no proxy
+     * overwrites it. Controlled by the TRUST_PROXY environment variable.
+     */
+    public bool $trustProxy = false;
+
+    /**
+     * --------------------------------------------------------------------------
      * Content Security Policy
      * --------------------------------------------------------------------------
      *
@@ -203,6 +215,16 @@ class App extends BaseConfig
     public function __construct()
     {
         parent::__construct();
+
+        $this->trustProxy = filter_var(env('TRUST_PROXY', $this->trustProxy), FILTER_VALIDATE_BOOLEAN);
+        if ($this->trustProxy) {
+            // Trust X-Forwarded-For from any direct peer (IPv4 and IPv6) so
+            // getIPAddress() returns the real client behind the proxy.
+            $this->proxyIPs = [
+                '0.0.0.0/0' => 'X-Forwarded-For',
+                '::/0'      => 'X-Forwarded-For',
+            ];
+        }
 
         if ($this->baseURL !== 'http://localhost:8080/') {
             return;

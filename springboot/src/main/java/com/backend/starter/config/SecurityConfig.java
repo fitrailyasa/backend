@@ -25,6 +25,9 @@ import java.util.List;
 @EnableConfigurationProperties(AppProperties.class)
 public class SecurityConfig {
 
+    private static final List<String> DEFAULT_CORS_ORIGINS =
+            List.of("http://localhost:3000", "http://localhost:5173", "http://localhost:4200");
+
     private final AppProperties properties;
 
     public SecurityConfig(AppProperties properties) {
@@ -42,11 +45,18 @@ public class SecurityConfig {
             HttpSecurity http,
             com.backend.starter.security.JwtAuthenticationFilter jwtAuthenticationFilter,
             com.backend.starter.security.RateLimitFilter rateLimitFilter,
+            com.backend.starter.security.BodyLimitFilter bodyLimitFilter,
+            com.backend.starter.security.SecurityHeadersFilter securityHeadersFilter,
             ObjectMapper objectMapper
     ) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsSource()))
+                // HSTS is owned by SecurityHeadersFilter so it only appears when ENABLE_HSTS is
+                // on and the request is HTTPS; frame options are pinned to the spec value.
+                .headers(headers -> headers
+                        .httpStrictTransportSecurity(hsts -> hsts.disable())
+                        .frameOptions(frame -> frame.deny()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -98,25 +108,42 @@ public class SecurityConfig {
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, com.backend.starter.security.JwtAuthenticationFilter.class);
+                .addFilterBefore(rateLimitFilter, com.backend.starter.security.JwtAuthenticationFilter.class)
+                .addFilterAfter(bodyLimitFilter, com.backend.starter.security.RateLimitFilter.class)
+                // Before CorsFilter so even preflight responses (short-circuited by the CORS
+                // processor) carry the security headers.
+                .addFilterBefore(securityHeadersFilter, org.springframework.web.filter.CorsFilter.class);
         return http.build();
     }
 
     private CorsConfigurationSource corsSource() {
         return request -> {
             CorsConfiguration configuration = new CorsConfiguration();
-            String raw = properties.getCorsOrigins() == null ? "*" : properties.getCorsOrigins().trim();
-            if (raw.isEmpty() || "*".equals(raw)) {
-                configuration.setAllowedOriginPatterns(List.of("*"));
-            } else {
-                configuration.setAllowedOrigins(Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
-            }
+            configuration.setAllowedOrigins(corsOrigins());
             configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
             configuration.setAllowedHeaders(List.of("*"));
             configuration.setExposedHeaders(List.of("X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "Retry-After"));
             configuration.setAllowCredentials(false);
+            configuration.setMaxAge(600L);
             return configuration;
         };
+    }
+
+    /**
+     * Explicit allowlist from {@code CORS_ORIGINS} (comma separated, dev defaults
+     * localhost:3000/5173/4200). A bare {@code *} falls back to the default allowlist: the CORS
+     * spec never sees {@code *} combined with credentials here.
+     */
+    private List<String> corsOrigins() {
+        String raw = properties.getCorsOrigins() == null ? "" : properties.getCorsOrigins().trim();
+        if (raw.isEmpty() || "*".equals(raw)) {
+            return DEFAULT_CORS_ORIGINS;
+        }
+        List<String> origins = Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty() && !"*".equals(origin))
+                .toList();
+        return origins.isEmpty() ? DEFAULT_CORS_ORIGINS : origins;
     }
 
     public static void write(HttpServletResponse response, ObjectMapper objectMapper, int status, String message) throws IOException {

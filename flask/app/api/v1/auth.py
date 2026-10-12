@@ -3,7 +3,13 @@
 from flask import Blueprint, g, request
 
 from app.common.auth import authenticate, extract_bearer
-from app.common.rate_limit import rate_limited
+from app.common.errors import ApiError
+from app.common.rate_limit import (
+    enforce_login_rate_limit,
+    rate_limited,
+    record_login_failure,
+    reset_login_rate_limit,
+)
 from app.common.requests import json_body
 from app.common.responses import created, ok
 from app.common.serialize import dump_user
@@ -25,7 +31,18 @@ def register():
 @rate_limited
 def login():
     payload = parse(LoginSchema, json_body())
-    return ok("Login successful", auth_service.login(payload["email"], payload["password"]))
+    # Lock check happens before any password hash is touched.
+    locked = enforce_login_rate_limit(payload["email"])
+    if locked is not None:
+        return locked
+    try:
+        result = auth_service.login(payload["email"], payload["password"])
+    except ApiError as error:
+        if error.status_code == 401:
+            record_login_failure(payload["email"])
+        raise
+    reset_login_rate_limit(payload["email"])
+    return ok("Login successful", result)
 
 
 @bp.post("/refresh")

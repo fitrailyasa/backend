@@ -1,4 +1,4 @@
-const { Controller, Get, HttpCode, HttpStatus, Inject, Post, Req } = require('@nestjs/common');
+const { Controller, Get, HttpCode, HttpStatus, Inject, Post, Req, UseGuards } = require('@nestjs/common');
 const { ApiBearerAuth, ApiBody, ApiOkResponse, ApiOperation, ApiTags } = require('@nestjs/swagger');
 const { AuthService } = require('./auth.service');
 const { RegisterDto } = require('./dto/register.dto');
@@ -6,6 +6,7 @@ const { LoginDto } = require('./dto/login.dto');
 const { Public } = require('../common/decorators/public.decorator');
 const { CurrentUser } = require('../common/decorators/current-user.decorator');
 const { ValidatedBody } = require('../common/decorators/validated.decorator');
+const { LoginRateLimitGuard } = require('../common/security/login-rate-limit.guard');
 
 @ApiTags('auth')
 @Controller('auth')
@@ -23,13 +24,14 @@ class AuthController {
   }
 
   @Public()
+  @UseGuards(LoginRateLimitGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Exchange email and password for a token pair' })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ description: 'Returns the access token, the refresh token and the user.' })
-  login(@ValidatedBody(LoginDto) payload) {
-    return this.authService.login(payload);
+  login(@ValidatedBody(LoginDto) payload, @Req() request) {
+    return this.authService.login(payload, request);
   }
 
   @Public()

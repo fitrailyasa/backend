@@ -1,5 +1,6 @@
 <?php
 
+use App\Libraries\RateLimiter;
 use CodeIgniter\Test\CIUnitTestCase;
 use CodeIgniter\Test\DatabaseTestTrait;
 use CodeIgniter\Test\FeatureTestTrait;
@@ -17,6 +18,8 @@ final class ApiContractTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        RateLimiter::resetLoginRateLimits();
 
         $this->db->table('users')->insert([
             'name' => 'Admin',

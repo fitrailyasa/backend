@@ -62,11 +62,44 @@ The `test` profile uses H2 (`MODE=MySQL`) and the script `src/test/resources/db/
 | `JWT_AUDIENCE` | `backend-starter-clients` |
 | `APP_SEED` | `false` |
 | `BCRYPT_ROUNDS` | `10` |
-| `CORS_ORIGIN` | `*` |
-| `RATE_LIMIT_WINDOW_MS` | `900000` |
-| `RATE_LIMIT_MAX` | `100` (register, login, refresh) |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` (comma separated; legacy `CORS_ORIGIN` still read, a bare `*` falls back to this allowlist) |
+| `RATE_LIMIT_ENABLED` | `true` (global limiter, skipped automatically in the `test` profile) |
+| `RATE_LIMIT_MAX` | `300` (global, per IP) |
+| `RATE_LIMIT_WINDOW_MS` | `60000` (global) |
+| `AUTH_RATE_LIMIT_MAX` | `100` (auth routes register/login/refresh, per IP per endpoint) |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | `900000` |
+| `LOGIN_RATE_LIMIT_MAX` | `3` (failed logins per normalized email) |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `10` (failed logins per client IP) |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` |
+| `TRUST_PROXY` | `false` (only then is `X-Forwarded-For` trusted) |
+| `ENABLE_HSTS` | `false` (HSTS is sent only when this is `true` **and** the request is HTTPS) |
+| `BODY_LIMIT` | `102400` (max request body in bytes, 100kb) |
 
 Spring reads these values through `application.yml` (`${ENV}`). A `.env` file in the working directory is loaded only for keys that are not already set in the environment.
+
+## Security
+
+Implemented from `_SECURITY_SPEC.md` (details and tunables are in the environment table above):
+
+- **Login attempt limiter** — `POST /api/v1/auth/login` allows **3 failed logins per normalized email (trim + lowercase) per 15 minutes**, plus **10 failed logins per client IP per 15 minutes**, as sliding windows in memory (expired entries are pruned, so the stores stay bounded). Only failed credential checks count — unknown email and wrong password both count — and a successful login clears that email's counter. The lock is checked **before** the password hash is verified. While locked, every attempt (including a correct password) gets `429` with `Retry-After: <seconds until the oldest failure expires>` (always >= 1) and the standard envelope without an `errors` key:
+
+  ```json
+  { "success": false, "message": "Too many failed login attempts. Please try again later." }
+  ```
+
+- **Global request limit** — 300 requests / 60s per IP on everything except `/health` and the API index (`/api/v1`), over-limit responses are `429` with `Retry-After` and the standard envelope. The limiter is skipped automatically in the `test` profile so suites cannot flake. The pre-existing stricter limit on the auth routes (100 / 15 min per IP per endpoint, `AUTH_RATE_LIMIT_*`) is kept.
+- **Security headers on every response** — `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `Content-Security-Policy: default-src 'none'` for the JSON API. The self-hosted Swagger UI page (`/api/v1/docs`, and its webjar assets under `/webjars`) is HTML served from this app, so those paths use a relaxed `default-src 'self'` policy plus `script-src/style-src 'self' 'unsafe-inline'`, `img-src 'self' data:`, `font-src 'self' data:`, `connect-src 'self'`. `Strict-Transport-Security` is only written when `ENABLE_HSTS=true` **and** the request is HTTPS.
+- **Fingerprint removal** — `Server`, `X-Powered-By` and `X-Application-Context` are stripped from responses.
+- **CORS** — explicit origin allowlist from `CORS_ORIGINS` (dev defaults `http://localhost:3000,http://localhost:5173,http://localhost:4200`); a bare `*` is never used, credentials are not allowed, `Vary: Origin` is always present, preflight results are cached for 600s.
+- **Body size cap** — JSON bodies over 100kb (`BODY_LIMIT`, in bytes) are rejected with `413` and the standard envelope before the body is read; multipart uploads use the same cap via `spring.servlet.multipart`.
+- **Auth hygiene** — one generic `401` message for both wrong email and wrong password, and when the email does not exist the password is still compared against a fixed dummy bcrypt hash so timing cannot reveal account existence. Passwords and tokens are never logged.
+- **Proxy trust** — `X-Forwarded-For` is only honoured when `TRUST_PROXY=true`, otherwise IP-keyed limits would be spoofable (and with it on by default every user would share one IP).
+- **500s** stay sanitized (`Internal server error`); stack traces only go to the server log.
+
+### Per-process counters
+
+All limiters (global, auth routes, login attempts) live in process memory: counters reset on restart and are **not shared between instances**. Scale vertically or swap the stores for Redis when running more than one process/replica. Tests reset the login counters through `LoginAttemptService.resetLoginRateLimits()`.
 
 ## Layout
 

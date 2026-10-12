@@ -87,6 +87,44 @@ Tests use in-memory SQLite (`appsettings.Testing.json`). They do not need MySQL.
 
 `GET /health` returns `{ status, uptime, timestamp }` without the envelope. Other endpoints live under `api/v1` and use the envelope. Collections include `meta.page`, `meta.limit`, `meta.total`, `meta.total_pages`. `errors` appears only on 422. Delete returns 200, not 204.
 
+## Security
+
+Implements `_SECURITY_SPEC.md` with the same behaviour as the other framework folders.
+
+- **Login attempt limiter** — `POST /api/v1/auth/login` allows **3 failed logins per normalized email (trim + lowercase) per 15 minutes**, plus **10 failed logins per client IP per 15 minutes** (sliding window, in-memory `ConcurrentDictionary` store that prunes expired entries). Only failed credential checks count — unknown email and wrong password alike — and a successful login clears that email's counter. The lock is checked **before** the bcrypt compare, so a locked account returns **429** even with the correct password:
+
+  ```json
+  { "success": false, "message": "Too many failed login attempts. Please try again later." }
+  ```
+
+  with `Retry-After: <seconds until the oldest failure expires>` (always >= 1) and no `errors` key.
+- **Global rate limit** — 300 requests / 60 s per IP on everything except `GET /health` and the route index `GET /api/v1`. Over-limit responses are 429 with the standard envelope and `Retry-After`. Keys: `RateLimit:Enabled` (`RATE_LIMIT_ENABLED`), `RateLimit:PermitLimit` (`RATE_LIMIT_MAX`), `RateLimit:WindowSeconds` (`RATE_LIMIT_WINDOW_MS`). It is **disabled automatically when the environment is `Testing`** so suites never flake.
+- **Security headers** on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `Content-Security-Policy: default-src 'none'` for the JSON API. The Swagger UI HTML under `/api/v1/docs` (served by this same app) relaxes it to `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:` — noted here as required by the spec. `Strict-Transport-Security: max-age=31536000` is sent only on HTTPS responses and only when `ENABLE_HSTS=true` (default off).
+- **No framework fingerprint** — Kestrel's `Server` header is switched off (`AddServerHeader = false`) and `Server`, `X-Powered-By`, `X-Sourcefiles`, `X-AspNet-Version`, `X-AspNetMvc-Version` are stripped when the response starts.
+- **CORS** — allowlist only, read from `Cors:Origins` / `CORS_ORIGINS` (default `http://localhost:3000,http://localhost:5173,http://localhost:4200`). Listed origins get `Access-Control-Allow-Credentials: true`; `*` is never combined with credentials. Any header/method, preflight cached for 600 s, and `Vary: Origin` on every response.
+- **Body size** — request bodies are capped at 100 kb (`BodyLimit:MaxBytes` / `BODY_LIMIT`) at the Kestrel level and with an app-level `Content-Length` check; an oversize body returns **413** with the standard envelope.
+- **Auth hygiene** — wrong email and wrong password share one generic 401 message (`These credentials do not match our records`), and when the email does not exist the submitted password is still run through a bcrypt compare against a fixed dummy hash so timing cannot reveal account existence. Request bodies, passwords, and tokens are never logged; unhandled errors return a sanitized `Internal server error` with the details only in the server log.
+- **Proxy trust** — `TRUST_PROXY=false` by default, so `X-Forwarded-For`/`X-Forwarded-Proto` are ignored (limits key on the direct peer address and cannot be spoofed). Set it to `true` behind a reverse proxy on loopback; otherwise every client shares the proxy's IP.
+- **Per-process counters** — the login counters and the global limiter live in process memory: they reset on restart and are **not shared between instances**. Scale vertically, or swap the store for Redis when running several replicas.
+
+New environment variables (all optional, defaults shown; `.env` or real process environment, see `.env.example`):
+
+| env | config key | default |
+| --- | --- | --- |
+| `LOGIN_RATE_LIMIT_MAX` | `LoginRateLimit:MaxAttempts` | `3` |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `LoginRateLimit:WindowSeconds` | `900000` (15 min) |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `LoginRateLimit:IpMaxAttempts` | `10` |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `LoginRateLimit:IpWindowSeconds` | `900000` (15 min) |
+| `RATE_LIMIT_ENABLED` | `RateLimit:Enabled` | `true` (forced off in `Testing`) |
+| `RATE_LIMIT_MAX` | `RateLimit:PermitLimit` | `300` |
+| `RATE_LIMIT_WINDOW_MS` | `RateLimit:WindowSeconds` | `60000` |
+| `CORS_ORIGINS` | `Cors:Origins` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` |
+| `TRUST_PROXY` | `TrustProxy` | `false` |
+| `ENABLE_HSTS` | `Hsts:Enabled` | `false` |
+| `BODY_LIMIT` (bytes) | `BodyLimit:MaxBytes` | `102400` |
+
+Lockout tests live in `tests/Backend.Api.Tests/LoginRateLimitTests.cs` (3 failures → 401 each, 4th → 429 with `Retry-After >= 1` and no `errors`, correct password while locked, unknown-email counting, reset on success, per-email scope, normalized key) and `SecurityHardeningTests.cs` (headers, CORS allowlist, 100 kb cap). Tests reset the counters through `ILoginAttemptService.Reset()` between cases.
+
 ## Endpoints
 
 | Method | Path | Auth |

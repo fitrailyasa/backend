@@ -2,6 +2,7 @@ import { UnauthorizedException, UnprocessableEntityException } from '@nestjs/com
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { DataSource } from 'typeorm';
+import { LoginRateLimitService, resetLoginRateLimits } from '../common/security/login-rate-limit.service';
 import { hashPassword } from '../common/utils/password';
 import { AuthService, AuthUserRecord, JwtPayload } from './auth.service';
 
@@ -39,7 +40,7 @@ const createHarness = (user: AuthUserRecord | null = row()) => {
     JWT_EXPIRES_IN: String(EXPIRES_IN),
   });
   const jwt = new JwtService({ secret: ACCESS_SECRET });
-  const service = new AuthService(dataSource, config, jwt);
+  const service = new AuthService(dataSource, config, jwt, new LoginRateLimitService(config));
 
   return { service, repository, queryBuilder, jwt };
 };
@@ -52,6 +53,11 @@ const registerDto = {
 };
 
 describe('AuthService', () => {
+  beforeEach(() => {
+    // failed logins are counted in process memory: start every case from zero
+    resetLoginRateLimits();
+  });
+
   describe('register', () => {
     it('returns a token pair and never exposes the password hash', async () => {
       const { service, repository } = createHarness(null);
@@ -150,7 +156,7 @@ describe('AuthService', () => {
       const { service } = createHarness();
       const expiresAt = Math.floor(Date.now() / 1000) + 600;
 
-      await expect(service.logout('jti-1', expiresAt)).resolves.toEqual({ revoked: true });
+      await expect(service.logout('jti-1', expiresAt)).resolves.toBeNull();
       expect(service.isRevoked({ sub: 1, email: 'a@b.c', role: 'user', jti: 'jti-1', exp: expiresAt })).toBe(
         true,
       );

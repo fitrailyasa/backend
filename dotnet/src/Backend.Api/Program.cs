@@ -8,6 +8,8 @@ using Backend.Application.Abstractions;
 using Backend.Infrastructure;
 using Backend.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
@@ -15,6 +17,25 @@ JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 DotEnv.Load(builder.Configuration, builder.Environment.ContentRootPath);
+var bodyLimit = builder.Configuration.GetValue("BodyLimit:MaxBytes", 102400L);
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // No framework fingerprint; request bodies are capped (default 100kb).
+    options.AddServerHeader = false;
+    if (bodyLimit > 0)
+    {
+        options.Limits.MaxRequestBodySize = bodyLimit;
+    }
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    if (bodyLimit > 0)
+    {
+        options.MultipartBodyLengthLimit = bodyLimit;
+    }
+});
+
 if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.WebHost.UseUrls(builder.Configuration["Urls"] ?? "http://localhost:5080");
@@ -106,7 +127,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// CORS: explicit allowlist only, never '*' together with credentials.
+var corsOrigins = (builder.Configuration["Cors:Origins"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+if (corsOrigins.Length == 0)
+{
+    corsOrigins = ["http://localhost:3000", "http://localhost:5173", "http://localhost:4200"];
+}
+
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
+{
+    if (corsOrigins.Contains("*"))
+    {
+        policy.AllowAnyOrigin();
+    }
+    else
+    {
+        policy.WithOrigins(corsOrigins).AllowCredentials();
+    }
+
+    policy.AllowAnyHeader().AllowAnyMethod().SetPreflightMaxAge(TimeSpan.FromSeconds(600));
+}));
 
 var app = builder.Build();
 
@@ -135,6 +177,22 @@ if (app.Configuration.GetValue<bool>("Seed:Enabled"))
     Console.WriteLine(summary.Skipped ? "[seed] admin already exists, skipped" : "[seed] demo data created");
 }
 
+// X-Forwarded-For / X-Forwarded-Proto are honoured only when TRUST_PROXY is on (loopback proxies).
+if (app.Configuration.GetValue<bool>("TrustProxy"))
+{
+    app.UseForwardedHeaders(new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    });
+}
+
+// Outermost first so every response (including Swagger UI and error bodies) gets the headers.
+app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<RateLimitMiddleware>();
+app.UseMiddleware<BodyLimitMiddleware>();
+app.UseCors();
+
 if (!app.Environment.IsEnvironment("Testing"))
 {
     app.MapGet("/api/v1/docs.json", () => Results.File(
@@ -151,9 +209,6 @@ if (!app.Environment.IsEnvironment("Testing"))
     });
 }
 
-app.UseMiddleware<ExceptionHandlingMiddleware>();
-app.UseMiddleware<RateLimitMiddleware>();
-app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

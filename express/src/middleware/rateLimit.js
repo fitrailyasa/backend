@@ -1,7 +1,7 @@
 import env from '../config/env.js';
 import ApiError from '../utils/ApiError.js';
 
-export default function rateLimit({ windowMs = env.rateLimit.windowMs, max = env.rateLimit.max, key } = {}) {
+export default function rateLimit({ windowMs = env.authRateLimit.windowMs, max = env.authRateLimit.max, key, skip } = {}) {
   if (max <= 0) return (req, res, next) => next();
 
   const hits = new Map();
@@ -9,6 +9,8 @@ export default function rateLimit({ windowMs = env.rateLimit.windowMs, max = env
   const resolveKey = key ?? ((req) => req.ip || req.socket?.remoteAddress || 'unknown');
 
   return function limiter(req, res, next) {
+    if (skip?.(req)) return next();
+
     const id = resolveKey(req);
     const now = Date.now();
     const entry = hits.get(id);

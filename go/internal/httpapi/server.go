@@ -14,10 +14,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/backend-starter/go/internal/config"
 	"github.com/backend-starter/go/internal/model"
+	"github.com/backend-starter/go/internal/security"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -54,13 +56,17 @@ type hit struct {
 }
 
 type Server struct {
-	cfg     config.Config
-	db      *gorm.DB
-	engine  *gin.Engine
-	started time.Time
-	mu      sync.Mutex
-	revoked map[string]int64
-	hits    map[string]hit
+	cfg          config.Config
+	db           *gorm.DB
+	engine       *gin.Engine
+	started      time.Time
+	mu           sync.Mutex
+	revoked      map[string]int64
+	hits         map[string]hit
+	globalHits   map[string]hit
+	loginLimiter *security.LoginLimiter
+	dummyHash    string
+	rateSkip     bool
 }
 
 func New(cfg config.Config, db *gorm.DB) *Server {
@@ -69,11 +75,26 @@ func New(cfg config.Config, db *gorm.DB) *Server {
 		gin.SetMode(gin.TestMode)
 	}
 	s := &Server{
-		cfg:     cfg,
-		db:      db,
-		started: time.Now(),
-		revoked: map[string]int64{},
-		hits:    map[string]hit{},
+		cfg:        cfg,
+		db:         db,
+		started:    time.Now(),
+		revoked:    map[string]int64{},
+		hits:       map[string]hit{},
+		globalHits: map[string]hit{},
+		loginLimiter: security.NewLoginLimiter(security.LoginLimits{
+			EmailMax:    cfg.LoginRateMax,
+			EmailWindow: time.Duration(cfg.LoginRateWindowMS) * time.Millisecond,
+			IPMax:       cfg.LoginIPRateMax,
+			IPWindow:    time.Duration(cfg.LoginIPRateWindowMS) * time.Millisecond,
+		}),
+		// The global rate limiter never runs inside a test binary unless a
+		// test opts in explicitly by clearing rateSkip, so suites do not flake.
+		rateSkip: cfg.Env == "test" || testing.Testing(),
+	}
+	// A fixed bcrypt hash lets login spend comparable time when the email is
+	// unknown, so response timing does not reveal which accounts exist.
+	if dummy, err := bcrypt.GenerateFromPassword([]byte("dummy-password"), bcryptCost(cfg.BcryptRounds)); err == nil {
+		s.dummyHash = string(dummy)
 	}
 	s.engine = s.routes()
 	return s
@@ -90,7 +111,15 @@ func (s *Server) Run(addr string) error {
 
 func (s *Server) routes() *gin.Engine {
 	r := gin.New()
-	r.Use(s.recover, s.cors, s.limitBody)
+	// TRUST_PROXY decides whether X-Forwarded-For may stand in for the client
+	// IP that every rate limiter keys on. Off by default so the limit cannot
+	// be spoofed by an untrusted client.
+	if s.cfg.TrustProxy {
+		_ = r.SetTrustedProxies([]string{"0.0.0.0/0", "::/0"})
+	} else {
+		_ = r.SetTrustedProxies(nil)
+	}
+	r.Use(s.recover, s.secureHeaders, s.cors, s.limitBody, s.limitGlobal)
 	r.GET("/health", s.health)
 
 	api := r.Group(s.cfg.Prefix)
@@ -170,38 +199,85 @@ func (s *Server) recover(c *gin.Context) {
 	c.Next()
 }
 
+// docsCSP is the only relaxation of the API's default-src 'none' policy: the
+// Swagger UI page served by this app loads its assets from cdn.jsdelivr.net
+// and is documented in go/README.md.
+const docsCSP = "default-src 'self'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'"
+
+// secureHeaders stamps the hardening headers on every response and strips
+// framework fingerprints such as Server.
+func (s *Server) secureHeaders(c *gin.Context) {
+	header := c.Writer.Header()
+	header.Set("X-Content-Type-Options", "nosniff")
+	header.Set("X-Frame-Options", "DENY")
+	header.Set("Referrer-Policy", "no-referrer")
+	header.Set("Cross-Origin-Opener-Policy", "same-origin")
+	header.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+	header.Set("Content-Security-Policy", "default-src 'none'")
+	header.Del("Server")
+	if s.cfg.EnableHSTS && s.requestSecure(c) {
+		header.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+	}
+	c.Next()
+	header.Del("Server")
+}
+
+// requestSecure reports whether the request arrived over HTTPS, honouring
+// X-Forwarded-Proto only when the proxy in front of us is trusted.
+func (s *Server) requestSecure(c *gin.Context) bool {
+	if c.Request.TLS != nil {
+		return true
+	}
+	return s.cfg.TrustProxy && strings.EqualFold(c.GetHeader("X-Forwarded-Proto"), "https")
+}
+
+// cors reflects only origins from the CORS allowlist, never `*` together with
+// credentials, and always marks responses as origin dependent.
 func (s *Server) cors(c *gin.Context) {
-	origin := s.cfg.CORSOrigin
-	if origin == "" {
-		origin = "*"
-	}
 	requestOrigin := c.GetHeader("Origin")
-	allow := origin
-	if origin != "*" && requestOrigin != "" {
-		allowed := false
-		for _, item := range strings.Split(origin, ",") {
-			if strings.TrimSpace(item) == requestOrigin {
-				allowed = true
-				break
-			}
-		}
-		if allowed {
-			allow = requestOrigin
-		} else {
-			allow = ""
+	allowed := ""
+	if requestOrigin != "" {
+		switch {
+		case s.corsAllowsAny():
+			allowed = "*"
+		case s.corsAllowed(requestOrigin):
+			allowed = requestOrigin
 		}
 	}
-	if allow != "" {
-		c.Header("Access-Control-Allow-Origin", allow)
-		c.Header("Vary", "Origin")
+	c.Header("Vary", "Origin")
+	if allowed != "" {
+		c.Header("Access-Control-Allow-Origin", allowed)
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Max-Age", "600")
+		if allowed != "*" {
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
 	}
 	if c.Request.Method == http.MethodOptions {
 		c.AbortWithStatus(http.StatusNoContent)
 		return
 	}
 	c.Next()
+}
+
+func (s *Server) corsAllowsAny() bool {
+	return contains(s.corsOriginList(), "*")
+}
+
+func (s *Server) corsAllowed(origin string) bool {
+	return contains(s.corsOriginList(), origin)
+}
+
+func (s *Server) corsOriginList() []string {
+	items := strings.Split(s.cfg.CORSOrigin, ",")
+	origins := make([]string, 0, len(items))
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+	return origins
 }
 
 func (s *Server) limitBody(c *gin.Context) {
@@ -211,48 +287,86 @@ func (s *Server) limitBody(c *gin.Context) {
 	c.Next()
 }
 
-func (s *Server) limitAuth(c *gin.Context) {
-	if s.cfg.RateMax <= 0 {
+// rateLimitActive reports whether request counting is on. Counting is skipped
+// in test binaries and under APP_ENV=test so suites never flake.
+func (s *Server) rateLimitActive() bool {
+	return !s.rateSkip && s.cfg.RateEnabled && s.cfg.RateMax > 0
+}
+
+// rateLimitExempt keeps liveness probes and the route index out of the global
+// counter, as required by _SECURITY_SPEC.md section 2.
+func rateLimitExempt(path, prefix string) bool {
+	return path == "/health" || path == prefix || path == strings.TrimSuffix(prefix, "/")+"/"
+}
+
+// limitGlobal counts every request per client IP at 300/60s by default.
+func (s *Server) limitGlobal(c *gin.Context) {
+	if !s.rateLimitActive() || rateLimitExempt(c.Request.URL.Path, s.cfg.Prefix) {
 		c.Next()
 		return
 	}
-	now := time.Now().UnixMilli()
-	key := c.ClientIP()
-	s.mu.Lock()
-	entry, ok := s.hits[key]
-	if !ok || entry.resetAt <= now {
-		entry = hit{count: 1, resetAt: now + int64(s.cfg.RateWindowMS)}
-	} else {
-		entry.count++
-	}
-	s.hits[key] = entry
-	if len(s.hits) > 5000 {
-		for id, value := range s.hits {
-			if value.resetAt <= now {
-				delete(s.hits, id)
-			}
-		}
-	}
-	s.mu.Unlock()
-
-	remaining := s.cfg.RateMax - entry.count
-	if remaining < 0 {
-		remaining = 0
-	}
-	c.Header("X-RateLimit-Limit", strconv.Itoa(s.cfg.RateMax))
-	c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
-	c.Header("X-RateLimit-Reset", strconv.FormatInt((entry.resetAt+999)/1000, 10))
-	if entry.count > s.cfg.RateMax {
-		retry := (entry.resetAt - now + 999) / 1000
-		if retry < 1 {
-			retry = 1
-		}
-		c.Header("Retry-After", strconv.FormatInt(retry, 10))
+	if !s.track(s.globalHits, c, s.cfg.RateMax, s.cfg.RateWindowMS) {
 		s.fail(c, http.StatusTooManyRequests, "Too many requests, please try again later", nil)
 		c.Abort()
 		return
 	}
 	c.Next()
+}
+
+// limitAuth keeps the extra per-IP limiter that register/login/refresh had
+// before the global limiter existed.
+func (s *Server) limitAuth(c *gin.Context) {
+	if !s.rateLimitActive() {
+		c.Next()
+		return
+	}
+	if !s.track(s.hits, c, s.cfg.RateMax, s.cfg.RateWindowMS) {
+		s.fail(c, http.StatusTooManyRequests, "Too many requests, please try again later", nil)
+		c.Abort()
+		return
+	}
+	c.Next()
+}
+
+// track counts one request against the client IP in the given store, writes
+// the X-RateLimit-* headers and reports whether the caller is still within
+// the limit. When it is not, Retry-After is set as well.
+func (s *Server) track(store map[string]hit, c *gin.Context, max, windowMS int) bool {
+	now := time.Now().UnixMilli()
+	key := c.ClientIP()
+	s.mu.Lock()
+	entry, ok := store[key]
+	if !ok || entry.resetAt <= now {
+		entry = hit{count: 1, resetAt: now + int64(windowMS)}
+	} else {
+		entry.count++
+	}
+	store[key] = entry
+	if len(store) > 5000 {
+		for id, value := range store {
+			if value.resetAt <= now {
+				delete(store, id)
+			}
+		}
+	}
+	s.mu.Unlock()
+
+	remaining := max - entry.count
+	if remaining < 0 {
+		remaining = 0
+	}
+	c.Header("X-RateLimit-Limit", strconv.Itoa(max))
+	c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+	c.Header("X-RateLimit-Reset", strconv.FormatInt((entry.resetAt+999)/1000, 10))
+	if entry.count > max {
+		retry := (entry.resetAt - now + 999) / 1000
+		if retry < 1 {
+			retry = 1
+		}
+		c.Header("Retry-After", strconv.FormatInt(retry, 10))
+		return false
+	}
+	return true
 }
 
 func (s *Server) authenticate(c *gin.Context) {
@@ -381,6 +495,10 @@ func (s *Server) docsJSON(c *gin.Context) {
 }
 
 func (s *Server) docsPage(c *gin.Context) {
+	// The JSON API ships default-src 'none'; the Swagger UI is the one page
+	// this app serves itself, so it gets a policy scoped to the assets it
+	// genuinely loads (noted in go/README.md).
+	c.Header("Content-Security-Policy", docsCSP)
 	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(docsHTML))
 }
 
@@ -556,15 +674,19 @@ func bearer(header string) string {
 	return strings.TrimSpace(parts[1])
 }
 
+func bcryptCost(rounds int) int {
+	switch {
+	case rounds < bcrypt.MinCost:
+		return bcrypt.DefaultCost
+	case rounds > bcrypt.MaxCost:
+		return bcrypt.MaxCost
+	default:
+		return rounds
+	}
+}
+
 func (s *Server) hashPassword(plain string) (string, error) {
-	cost := s.cfg.BcryptRounds
-	if cost < bcrypt.MinCost {
-		cost = bcrypt.DefaultCost
-	}
-	if cost > bcrypt.MaxCost {
-		cost = bcrypt.MaxCost
-	}
-	hashed, err := bcrypt.GenerateFromPassword([]byte(plain), cost)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(plain), bcryptCost(s.cfg.BcryptRounds))
 	if err != nil {
 		return "", err
 	}

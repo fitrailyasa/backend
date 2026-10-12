@@ -7,4 +7,10 @@ process.env.DB_SEED = 'false';
 process.env.JWT_SECRET = 'test-secret-key-that-is-long-enough-1234567890';
 process.env.JWT_EXPIRES_IN = '3600';
 process.env.BCRYPT_SALT_ROUNDS = '4';
-process.env.CORS_ORIGIN = '*';
+// CORS allowlist (never `*` together with credentials), same defaults as production.
+process.env.CORS_ORIGINS = 'http://localhost:3000,http://localhost:5173,http://localhost:4200';
+
+// The failed-login counters live in process memory: clear them so every test
+// suite starts from a clean slate (the global rate limit is off in tests).
+const { resetLoginRateLimits } = require('../src/common/security/login-rate-limit.service');
+resetLoginRateLimits();

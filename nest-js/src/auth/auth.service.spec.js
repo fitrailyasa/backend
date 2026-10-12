@@ -2,6 +2,7 @@ const { UnauthorizedException, UnprocessableEntityException } = require('@nestjs
 const { JwtService } = require('@nestjs/jwt');
 const { ConfigService } = require('@nestjs/config');
 const { hashPassword } = require('../common/utils/password');
+const { LoginRateLimitService } = require('../common/security/login-rate-limit.service');
 const { AuthService } = require('./auth.service');
 
 const ACCESS_SECRET = 'test-secret-key-that-is-long-enough-1234567890';
@@ -49,6 +50,8 @@ const createHarness = (user = row()) => {
   service.userRepository = repository;
   service.jwtService     = jwtService;
   service.config         = config;
+  service.loginRateLimit = new LoginRateLimitService();
+  service.loginRateLimit.config = config;
 
   return { service, repository, queryBuilder, jwtService };
 };

@@ -80,3 +80,35 @@ Collection queries: `page`, `limit` (max 100), `search`, `sort`, `order`. Produc
 ```powershell
 go test ./...
 ```
+
+## Security
+
+Implements `_SECURITY_SPEC.md` on top of the shared contract (`_SPEC.md` responses and status codes are unchanged).
+
+**Login lockout** — `POST /api/v1/auth/login` allows **3 failed logins per email per 15 minutes** and **10 failed logins per client IP per 15 minutes**, counted only on failed credential checks (unknown email and wrong password both count) and keyed on the normalized email (trim + lowercase). While the counter is exhausted the endpoint returns `429` with `Retry-After >= 1` and the standard envelope *without* an `errors` key, before any password hashing happens. A successful login clears that email's counter. One generic `401` message covers wrong email and wrong password, and unknown emails are still compared against a fixed dummy bcrypt hash so timing does not reveal which accounts exist.
+
+**Global rate limit** — **300 requests / 60 seconds per IP** on every route except `GET /health` and the route index (`/api/v1`), returning `429` with the standard envelope and `Retry-After`. Auth routes (`register`/`login`/`refresh`) additionally keep their own per-IP counter with the same settings. The limiter is disabled automatically when `APP_ENV=test` (or a Go test binary is running) so suites never flake, and by `RATE_LIMIT_ENABLED=false`.
+
+**Hardening** — every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` and `Content-Security-Policy: default-src 'none'`. The one relaxation is the Swagger UI page at `/api/v1/docs`, which gets a CSP scoped to `https://cdn.jsdelivr.net` (the only assets it loads) — the JSON API itself stays at `default-src 'none'`. `Strict-Transport-Security` is only sent when `ENABLE_HSTS=true` **and** the request is HTTPS. No `Server`/`X-Powered-By` fingerprint is emitted. Request bodies are capped at `BODY_LIMIT` (default `100kb`) and oversized payloads still get the standard envelope.
+
+**CORS** — origins are reflected only when listed in `CORS_ORIGINS` (defaults to the dev allowlist `http://localhost:3000,http://localhost:5173,http://localhost:4200`), responses always send `Vary: Origin`, preflights cache for 600s, and credentials are never combined with a `*` origin.
+
+**Proxy trust** — `TRUST_PROXY` (default `false`) controls whether `X-Forwarded-For` is trusted when deriving the client IP; keep it off unless a proxy you control sets the header, otherwise the IP limits can be spoofed (on behind a proxy, or every client shares one IP).
+
+**Caveat: counters are per process.** They live in memory, are lost on restart, and are not shared between instances — scale vertically, or swap the stores for Redis before running multiple workers/instances.
+
+### Environment
+
+| key | default | meaning |
+| --- | --- | --- |
+| `LOGIN_RATE_LIMIT_MAX` | `3` | failed logins per email before lockout (`0` disables) |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | sliding window for the per-email counter |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `10` | failed logins per client IP before lockout (`0` disables) |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` | sliding window for the per-IP counter |
+| `RATE_LIMIT_ENABLED` | `true` | master switch for request counting |
+| `RATE_LIMIT_MAX` | `300` | global requests per IP per window (`0` disables) |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | global window |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | comma separated CORS allowlist (`CORS_ORIGIN` still honoured) |
+| `BODY_LIMIT` | `100kb` | maximum accepted request body size |
+| `TRUST_PROXY` | `false` | trust `X-Forwarded-For` for the client IP |
+| `ENABLE_HSTS` | `false` | send HSTS on HTTPS requests |

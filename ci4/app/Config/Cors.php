@@ -100,6 +100,34 @@ class Cors extends BaseConfig
          *
          * @see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Access-Control-Max-Age
          */
-        'maxAge' => 7200,
+        'maxAge' => 600,
     ];
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Concrete allowlist from CORS_ORIGINS (legacy CORS_ORIGIN accepted).
+        // An explicit '*' or an empty value falls back to the dev allowlist;
+        // never '*' together with credentials.
+        $raw = env('CORS_ORIGINS') ?: env('CORS_ORIGIN') ?: '';
+        $origins = [];
+        foreach (explode(',', (string) $raw) as $origin) {
+            $origin = trim($origin);
+            if ($origin !== '' && $origin !== '*') {
+                $origins[] = $origin;
+            }
+        }
+
+        $this->default['allowedOrigins'] = $origins !== [] ? array_values(array_unique($origins)) : [
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://localhost:4200',
+        ];
+        $this->default['supportsCredentials'] = true;
+        $this->default['allowedHeaders']      = ['Authorization', 'Content-Type', 'Accept', 'X-Requested-With'];
+        $this->default['allowedMethods']      = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+        $this->default['exposedHeaders']      = ['Retry-After'];
+        $this->default['maxAge']              = 600;
+    }
 }

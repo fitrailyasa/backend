@@ -3,6 +3,7 @@ from .base import *  # noqa: F403
 DEBUG = False
 BCRYPT_ROUNDS = 4
 RATE_LIMIT_MAX = 1000
+RATE_LIMIT_ENABLED = False
 
 DATABASES = {
     'default': {

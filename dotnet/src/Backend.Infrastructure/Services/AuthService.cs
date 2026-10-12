@@ -11,6 +11,9 @@ namespace Backend.Infrastructure.Services;
 
 public sealed class AuthService : IAuthService
 {
+    // Compared when the email does not exist so timing cannot reveal account existence.
+    private static readonly string DummyPasswordHash = BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N"), workFactor: 10);
+
     private readonly AppDbContext _db;
     private readonly IPasswordHasher _passwords;
     private readonly IJwtTokenService _jwt;
@@ -48,7 +51,14 @@ public sealed class AuthService : IAuthService
     {
         var email = request.Email!.Trim();
         var user = await _db.Users.FirstOrDefaultAsync(candidate => candidate.Email.ToLower() == email.ToLower(), cancellationToken);
-        if (user is null || !_passwords.Verify(request.Password ?? string.Empty, user.Password))
+        if (user is null)
+        {
+            // Burn the same bcrypt work as a real match, then fail with the same generic message.
+            _passwords.Verify(request.Password ?? string.Empty, DummyPasswordHash);
+            throw AppException.Unauthorized("These credentials do not match our records");
+        }
+
+        if (!_passwords.Verify(request.Password ?? string.Empty, user.Password))
         {
             throw AppException.Unauthorized("These credentials do not match our records");
         }

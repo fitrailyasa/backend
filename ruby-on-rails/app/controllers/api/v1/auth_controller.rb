@@ -1,6 +1,8 @@
 module Api
   module V1
     class AuthController < BaseController
+      LOCKOUT_MESSAGE = "Too many failed login attempts. Please try again later."
+
       def register
         body = json_body
         errors = blank_errors
@@ -25,11 +27,20 @@ module Api
         end
         finish_validation!(errors)
 
+        ip = request.remote_ip.to_s
+        if (retry_after = LoginRateLimiter.retry_after(email, ip))
+          render_error(LOCKOUT_MESSAGE, status: 429, headers: { "Retry-After" => retry_after.to_s })
+          return
+        end
+
         user = User.find_by("LOWER(email) = ?", email)
-        unless user&.password_matches?(body["password"])
+        valid = user ? user.password_matches?(body["password"]) : User.password_matches_dummy?(body["password"])
+        unless valid
+          LoginRateLimiter.record_failure!(email, ip)
           raise ApiError.new("These credentials do not match our records", status: 401)
         end
 
+        LoginRateLimiter.reset!(email)
         render_success("Login successful", ApiSerializer.auth(user, TokenIssuer.issue(user)))
       end
 

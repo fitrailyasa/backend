@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.ArrayList;
@@ -29,7 +31,11 @@ public class GlobalExceptionHandler {
         if (exception.getStatus() == 422) {
             return ResponseEntity.status(422).body(ApiResponse.fail(exception.getMessage(), exception.getErrors()));
         }
-        return ResponseEntity.status(exception.getStatus()).body(ApiResponse.fail(exception.getMessage()));
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(exception.getStatus());
+        if (exception.getRetryAfterSeconds() != null) {
+            builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(exception.getRetryAfterSeconds()));
+        }
+        return builder.body(ApiResponse.fail(exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -45,6 +51,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnreadable(HttpMessageNotReadableException exception) {
         return ResponseEntity.badRequest().body(ApiResponse.fail("Invalid JSON payload"));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTooLarge(MaxUploadSizeExceededException exception) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(ApiResponse.fail("Request payload is too large"));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

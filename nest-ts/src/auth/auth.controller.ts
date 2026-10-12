@@ -1,9 +1,20 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UnauthorizedException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { CurrentUser, type AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { ResponseMessage } from '../common/decorators/response-message.decorator';
+import { LoginRateLimitGuard } from '../common/security/login-rate-limit.guard';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -22,12 +33,13 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(LoginRateLimitGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ResponseMessage('Login successful')
   @ApiOperation({ summary: 'Exchange credentials for a token pair' })
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  login(@Body() dto: LoginDto, @Req() request: Request) {
+    return this.authService.login(dto, request);
   }
 
   @Public()

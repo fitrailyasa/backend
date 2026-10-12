@@ -2,7 +2,9 @@ const { Injectable, Inject, UnauthorizedException, UnprocessableEntityException 
 const { JwtService } = require('@nestjs/jwt');
 const { InjectRepository } = require('@nestjs/typeorm');
 const { ConfigService } = require('@nestjs/config');
-const { hashPassword, verifyPassword } = require('../common/utils/password');
+const { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } = require('../common/utils/password');
+const { LoginRateLimitService } = require('../common/security/login-rate-limit.service');
+const { normalizeEmail } = require('../common/security/login-rate-limit.store');
 const { randomUUID } = require('crypto');
 const { User } = require('../users/entities/user.entity');
 const { ok } = require('../common/utils/api-response');
@@ -20,6 +22,9 @@ class AuthService {
 
   @Inject(ConfigService)
   config;
+
+  @Inject(LoginRateLimitService)
+  loginRateLimit;
 
   /**
    * In-memory JWT blacklist: `jti` -> expiry epoch seconds. A shared store such as
@@ -142,12 +147,24 @@ class AuthService {
     );
   }
 
-  async login(payload) {
-    const user = await this.findByEmail(payload.email, true);
+  async login(payload, request = {}) {
+    const email = normalizeEmail(payload.email);
+    const ip = request.ip ?? 'unknown';
 
-    if (!user || !(await verifyPassword(payload.password, user.password))) {
+    const user = await this.findByEmail(email, true);
+    const matches = user
+      ? await verifyPassword(payload.password, user.password)
+      : // unknown email: still spend a bcrypt comparison so the timing does not
+        // reveal whether the account exists
+        await verifyPassword(payload.password, DUMMY_PASSWORD_HASH);
+
+    if (!user || !matches) {
+      this.loginRateLimit.recordFailure(email, ip);
+      // one generic message for "wrong email" and "wrong password" alike
       throw new UnauthorizedException('These credentials do not match our records');
     }
+
+    this.loginRateLimit.reset(email, ip);
 
     return ok({ ...(await this.issueTokens(user)), user: this.sanitize(user) }, 'Login successful');
   }

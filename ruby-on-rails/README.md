@@ -84,9 +84,19 @@ Fill in `.env` (see the table below). `JWT_SECRET` must be at least 32 character
 | `JWT_EXPIRES_IN` | `3600` | Access token lifetime (seconds) |
 | `JWT_REFRESH_EXPIRES_IN` | `604800` | Refresh token lifetime (seconds) |
 | `BCRYPT_ROUNDS` | `10` (tests force 4) | bcrypt cost |
-| `CORS_ORIGIN` | `*` | CORS origin |
-| `RATE_LIMIT_WINDOW_MS` | `900000` | Auth throttle window |
-| `RATE_LIMIT_MAX` | `100` | Max POST register/login/refresh per IP. `0` = off |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | CORS origin allowlist, comma separated (`CORS_ORIGIN` still honoured as a legacy fallback) |
+| `RATE_LIMIT_ENABLED` | `true` (always off in the test env) | Global request throttle on/off |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Global throttle window |
+| `RATE_LIMIT_MAX` | `300` | Requests per IP per window on all routes except `/health`. `0` = off |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | `900000` | Auth POST throttle window |
+| `AUTH_RATE_LIMIT_MAX` | `100` | Max POST register/login/refresh per IP. `0` = off |
+| `LOGIN_RATE_LIMIT_MAX` | `3` | Failed logins per email before lockout |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Per-email lockout window |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `10` | Failed logins per IP before lockout |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` | Per-IP lockout window |
+| `BODY_LIMIT` | `100kb` | Max request body; larger bodies get `413` |
+| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` / `X-Forwarded-Proto` (only behind a proxy) |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security` on HTTPS responses |
 | `SECRET_KEY_BASE` | dev fallback | Rails secret |
 
 ## Database
@@ -149,7 +159,27 @@ Logout stores the access token `jti` in `Rails.cache` (memory store). The next r
 
 Wrong credentials: `401` `"These credentials do not match our records"`. Duplicate email: `422` with `errors.email` containing `"The email has already been taken."`.
 
-POST `/api/v1/auth/register`, `/login`, and `/refresh` use a simple Rack throttle (`429`).
+POST `/api/v1/auth/register`, `/login`, and `/refresh` use a simple Rack throttle (`429`). See [Security](#security) for the details.
+
+## Security
+
+**Login lockout.** `POST /api/v1/auth/login` allows **3 failed attempts per normalized email (trim + lowercase) per 15 minutes**, plus **10 failed attempts per client IP per 15 minutes** (`LOGIN_RATE_LIMIT_*` / `LOGIN_IP_RATE_LIMIT_*`). The window is sliding and the counters live in process memory. Only failed credential checks count — an unknown email and a wrong password both count — and a successful login clears that email's counter. While locked (even with the correct password) the endpoint answers `429` with `Retry-After: <seconds>` (always >= 1) and the standard error envelope without an `errors` key: `{ "success": false, "message": "Too many failed login attempts. Please try again later." }`. The lock is checked **before** the password hash is touched.
+
+**Auth POST throttle.** `POST /api/v1/auth/register`, `/login` and `/refresh` additionally share a fixed-window per-IP throttle (`AUTH_RATE_LIMIT_MAX`, default 100 per 15 minutes per IP).
+
+**Global throttle.** All routes except `GET /health` and the `/api/v1` route index get **300 requests / 60s per IP** (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`). It is skipped automatically in the test env and can be turned off with `RATE_LIMIT_ENABLED=false`. Over-limit responses are `429` with the standard envelope and a `Retry-After` header.
+
+**Headers.** Every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()` and `Content-Security-Policy: default-src 'none'`. The Swagger UI under `/api/v1/docs` is the only HTML served by the app, so it gets a relaxed `default-src 'self'` policy plus the script/style/font sources that UI genuinely needs (inline bootstrap script, vendored bundle, Google Fonts). `Strict-Transport-Security` is only sent on HTTPS responses and only when `ENABLE_HSTS=true`. Framework fingerprints (`Server`, `X-Powered-By`, `X-Runtime`) are stripped.
+
+**CORS.** Explicit allowlist from `CORS_ORIGINS` (comma separated; the legacy `CORS_ORIGIN` is still honoured). Default: `http://localhost:3000,http://localhost:5173,http://localhost:4200`. Only listed origins are reflected, `Vary: Origin` is sent, and the preflight cache is 600s. Credentials are never enabled (the API uses Bearer tokens, not cookies), so `*` is never combined with credentials.
+
+**Bodies.** Requests with a body larger than `BODY_LIMIT` (default `100kb`) are rejected with `413` and the standard error envelope.
+
+**Auth hygiene & logging.** Wrong email and wrong password return the identical generic `401` (`These credentials do not match our records`), and an unknown email is still compared against a fixed dummy bcrypt hash so timing does not reveal whether an account exists. Passwords and tokens are filtered from parameter logs; 500 responses are sanitized (details stay in the server log).
+
+**Proxy trust.** `X-Forwarded-For` / `X-Forwarded-Proto` are dropped unless `TRUST_PROXY=true` (default `false`), so IP-based limits cannot be spoofed by a direct client and HSTS cannot be injected through headers.
+
+**Caveat.** All counters (login lockout, throttles) are kept in process memory, per Puma worker. When running multiple instances, scale vertically or move the stores to Redis — each process keeps its own counters.
 
 ## Query
 

@@ -18,6 +18,7 @@ Includes full domain support for authentication, users, categories, products, ta
 - [API reference](#api-reference)
 - [Query parameters](#query-parameters)
 - [Authentication](#authentication)
+- [Security](#security)
 - [Testing](#testing)
 
 ---
@@ -78,7 +79,17 @@ Then run `npm run seed && npm run start:dev`.
 | `NODE_ENV` | `development` | Application environment (`development`, `production`, `test`) |
 | `PORT` | `3002` | Port HTTP server listens on |
 | `API_PREFIX` | `api/v1` | Global API prefix (excluding `/health`) |
-| `CORS_ORIGIN` | `*` | Allowed CORS origins (comma-separated or `*`) |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | CORS allowlist (comma separated). Legacy alias: `CORS_ORIGIN`; `*` is never combined with credentials |
+| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For` for the client IP (`true`, a hop count or an IP list) |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security` on HTTPS requests |
+| `BODY_LIMIT` | `100kb` | Maximum request body size (413 above the limit) |
+| `RATE_LIMIT_ENABLED` | `true` | Global request limiter (always off when `NODE_ENV=test`) |
+| `RATE_LIMIT_MAX` | `300` | Requests allowed per IP inside the rate-limit window |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Global rate-limit window (60 s) |
+| `LOGIN_RATE_LIMIT_MAX` | `3` | Failed logins allowed per email before lockout |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Per-email lockout window (15 min) |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `10` | Failed logins allowed per IP before lockout |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` | Per-IP lockout window (15 min) |
 | `DB_DIALECT` | `mysql` | Database driver (`mysql` or `sqlite`) |
 | `DB_HOST` | `127.0.0.1` | Database host |
 | `DB_PORT` | `3306` | Database port |
@@ -264,3 +275,77 @@ Base URL: `/api/v1`
 - Token claims: `sub` (user id), `email`, `role`, `iat`, `exp`, `jti`
 - Passwords are encrypted using **bcrypt** (minimum 8 characters)
 - Password hashes are never returned in any response
+
+---
+
+## Security
+
+Implements `_SECURITY_SPEC.md`. All counters below are **per process**: they are
+in-memory and reset on restart. Scale vertically, or swap the store for Redis
+when you run more than one instance (the JWT blacklist and the refresh-token
+state have the same caveat).
+
+### Login attempt limiter (`POST /api/v1/auth/login`)
+
+- **3 failed logins per normalized email** (trim + lowercased) inside a sliding
+  **15-minute** window (`LOGIN_RATE_LIMIT_MAX`, `LOGIN_RATE_LIMIT_WINDOW_MS`).
+  `Admin@X.com` and `admin@x.com` share one counter.
+- **10 failed logins per client IP** inside a sliding 15-minute window
+  (`LOGIN_IP_RATE_LIMIT_MAX`, `LOGIN_IP_RATE_LIMIT_WINDOW_MS`), counting every
+  email attempted from that address.
+- Only *failed* credential checks are counted - unknown email and wrong password
+  alike - and a **successful login clears the counters** of that email (and of
+  its own failures from that IP).
+- The lock is checked **before** the password hash is verified, so a locked
+  account answers `429` even with the correct password:
+
+  ```json
+  { "success": false, "message": "Too many failed login attempts. Please try again later." }
+  ```
+
+  with `Retry-After: <seconds until the lock expires>` (always >= 1) and no
+  `errors` key. Unlocked attempts keep returning the usual generic `401`
+  (`Invalid credentials`-style - one identical message for wrong email and wrong
+  password, and an unknown email still pays for a dummy bcrypt comparison so the
+  timing cannot reveal whether an account exists).
+- Tests: `src/common/security/login-rate-limit.store.spec.js` plus the e2e
+  suite `tests/login-rate-limit.e2e.test.js`; `resetLoginRateLimits()` is called
+  from `tests/setup-env.js` so suites stay deterministic.
+
+### Global request rate limit
+
+- **300 requests / 60 s per IP** on every route except `GET /health`
+  (`RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_ENABLED`).
+- Over-limit requests get `429` with `Retry-After` and the standard error
+  envelope. The limiter is **disabled automatically when `NODE_ENV=test`** so
+  test suites never flake.
+
+### Headers & hardening
+
+- Every response carries `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Opener-Policy: same-origin`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()` and
+  `Content-Security-Policy: default-src 'none'`.
+- **Swagger UI exception**: the docs are HTML served from the same process
+  (`/api/v1/docs`), so that page (and its static assets) get a relaxed
+  `default-src 'self'` policy plus the `'unsafe-inline'`/`'unsafe-eval'` script
+  sources, `style-src/img-src/font-src` allowances and `connect-src 'self'`
+  that the bundled Swagger UI genuinely needs. Everything else stays
+  `default-src 'none'`.
+- `Strict-Transport-Security` is sent **only** on HTTPS requests and only when
+  `ENABLE_HSTS=true`.
+- Framework fingerprint removed: no `X-Powered-By`, no `Server` banner.
+- **CORS** allowlist from `CORS_ORIGINS` (defaults
+  `http://localhost:3000,http://localhost:5173,http://localhost:4200`), with
+  `Vary: Origin` and a 600 s preflight cache. `*` is never combined with
+  credentials.
+- **Body cap** `BODY_LIMIT` (default `100kb`); oversized payloads answer `413`
+  with the standard envelope.
+- **Client IP** comes from `req.ip`; `X-Forwarded-For` is ignored unless
+  `TRUST_PROXY=true` (otherwise the IP limits would be spoofable - and behind a
+  proxy you must enable it or every visitor shares one IP).
+- Logging never includes request bodies, passwords or tokens; `500` responses
+  stay sanitized (`Internal server error`) with details only in the server log.
+
+---

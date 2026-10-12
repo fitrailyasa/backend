@@ -68,7 +68,19 @@ class AllExceptionsFilter {
       return { status: HttpStatus.BAD_REQUEST, message: 'Invalid JSON payload.' };
     }
 
+    // body-parser / http-errors style errors (e.g. 413 request entity too
+    // large) reach the filter as plain Errors carrying a 4xx status.
+    const status = Number(exception?.status ?? exception?.statusCode);
+    if (Number.isInteger(status) && status >= 400 && status < 500) {
+      return { status, message: AllExceptionsFilter.clientErrorMessage(status) };
+    }
+
     return { status: HttpStatus.INTERNAL_SERVER_ERROR, message: MESSAGES[500] };
+  }
+
+  static clientErrorMessage(status) {
+    if (status === HttpStatus.PAYLOAD_TOO_LARGE) return 'Request entity too large';
+    return MESSAGES[status] ?? 'Bad request';
   }
 
   static fromHttp(exception) {

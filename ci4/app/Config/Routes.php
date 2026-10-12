@@ -15,7 +15,7 @@ $routes->group('api/v1', static function ($routes): void {
     $routes->get('/', 'Index::show');
     $routes->get('health', 'Health::index');
     $routes->post('auth/register', 'Auth::register');
-    $routes->post('auth/login', 'Auth::login');
+    $routes->post('auth/login', 'Auth::login', ['filter' => 'loginratelimit']);
     $routes->post('auth/refresh', 'Auth::refresh');
     $routes->post('auth/logout', 'Auth::logout', ['filter' => 'api-auth']);
     $routes->get('auth/me', 'Auth::me', ['filter' => 'api-auth']);

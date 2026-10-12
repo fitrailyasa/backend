@@ -8,12 +8,14 @@ process.env.JWT_SECRET = 'test-secret-key-that-is-long-enough-1234567890';
 process.env.BCRYPT_ROUNDS = '4';
 process.env.LOG_FORMAT = 'tiny';
 process.env.RATE_LIMIT_MAX = '100000';
+process.env.AUTH_RATE_LIMIT_MAX = '100000';
 
-const [{ createApp }, { sequelize, syncDatabase }, models, { default: env }] = await Promise.all([
+const [{ createApp }, { sequelize, syncDatabase }, models, { default: env }, { resetLoginRateLimits }] = await Promise.all([
   import('../src/app.js'),
   import('../src/config/database.js'),
   import('../src/models/index.js'),
   import('../src/config/env.js'),
+  import('../src/middleware/loginRateLimit.js'),
 ]);
 
 const { User, Category, Product, Tag, Comment, Order, OrderItem } = models;
@@ -37,6 +39,7 @@ export function uniqueEmail(prefix = 'user') {
 
 export async function resetDatabase() {
   await syncDatabase({ force: true });
+  resetLoginRateLimits();
 }
 
 export function bearer(token) {
@@ -117,7 +120,7 @@ export async function createOrderRecord({ user, status = 'pending', items }) {
   return order;
 }
 
-export { sequelize, syncDatabase, env };
+export { sequelize, syncDatabase, env, resetLoginRateLimits };
 
 export default {
   app,

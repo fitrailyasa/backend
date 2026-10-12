@@ -40,8 +40,14 @@ CREATE DATABASE backend_starter CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 | `JWT_REFRESH_EXPIRES_IN` | `604800` | Refresh token lifetime in seconds |
 | `BCRYPT_ROUNDS` | `10` | Password hashing cost |
 | `PAGINATION_LIMIT` / `PAGINATION_MAX_LIMIT` | `10` / `100` | Collection page size |
-| `RATE_LIMIT_MAX` | `100` | Auth requests per window. `0` disables the limiter |
-| `CORS_ORIGIN` | `*` | Allowed browser origins |
+| `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` | `300` / `60000` | Global per-IP request limit. `RATE_LIMIT_ENABLED=false` disables it (it is off in the test env) |
+| `AUTH_RATE_LIMIT_MAX` / `AUTH_RATE_LIMIT_WINDOW_MS` | `100` / `900000` | Auth-route requests per window. `0` disables the limiter |
+| `LOGIN_RATE_LIMIT_MAX` / `LOGIN_RATE_LIMIT_WINDOW_MS` | `3` / `900000` | Failed logins per email before lockout |
+| `LOGIN_IP_RATE_LIMIT_MAX` / `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `10` / `900000` | Failed logins per client IP before lockout |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | Allowed browser origins, comma separated (`CORS_ORIGIN` still accepted) |
+| `BODY_LIMIT` | `100kb` | Max request body size, `413` above it |
+| `TRUST_PROXY` | `false` | Honour `X-Forwarded-For` / `X-Forwarded-Proto` behind a reverse proxy |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security` on HTTPS responses |
 
 See `.env.example` for the full list.
 
@@ -88,6 +94,23 @@ python -m pytest
 ```
 
 Pytest uses `TestingConfig`: SQLite `:memory:` with a single shared connection, bcrypt cost 4, and an isolated JWT secret. MySQL is not contacted.
+
+## Security
+
+- **Login attempt limiter** (`POST /api/v1/auth/login`): **3 failed logins per normalized email (trim + lowercase) per 15 minutes**, plus **10 failed logins per client IP per 15 minutes**. Only failed credential checks are counted - unknown email and wrong password both count - and a successful login clears that email's counter. The window slides, so `Retry-After` (seconds, always >= 1) is time until the oldest failure expires.
+- While locked the endpoint answers **429** before the password hash is touched (so a correct password is 429 too), with `Retry-After`, the usual `X-RateLimit-*` headers from the auth limiter, and the standard envelope **without** `errors`:
+
+  ```json
+  { "success": false, "message": "Too many failed login attempts. Please try again later." }
+  ```
+
+- **Global rate limit**: 300 requests / 60 seconds per IP on everything except `GET /health` and the API index (`GET /api/v1`), answered with 429, the standard envelope, and `Retry-After`. Tunable with `RATE_LIMIT_MAX`, `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_ENABLED`; disabled automatically in the test env. The auth routes keep their own limit too (`AUTH_RATE_LIMIT_MAX` per endpoint + IP).
+- **Security headers** on every response: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, and `Content-Security-Policy: default-src 'none'` for the JSON API. The Swagger UI under `/api/v1/docs` is HTML served from this same app, so it gets a relaxed CSP (`default-src 'self'` plus its inline script/style and `self`/`data:` images and fonts). `Strict-Transport-Security` is only sent when `ENABLE_HSTS=true` and the request is HTTPS. `Server` / `X-Powered-By` fingerprints are stripped from responses, and the Werkzeug dev server no longer announces `Server: Werkzeug/...`.
+- **CORS**: never `*` with credentials. `CORS_ORIGINS` (comma separated) defaults to `http://localhost:3000,http://localhost:5173,http://localhost:4200`; only listed origins are reflected, responses carry `Access-Control-Allow-Credentials: true` and `Vary: Origin`, and preflights are cached for 600 s. A bare `*` is ignored in favour of that allowlist.
+- **Body cap**: request bodies above `BODY_LIMIT` (default 100kb = 102400 bytes) return 413 with the standard envelope.
+- **Auth hygiene**: wrong email and wrong password share one generic 401 message (`These credentials do not match our records`), unknown emails still spend a password-hash comparison against a fixed dummy hash so timing cannot reveal whether an account exists, and no password or token is ever logged or returned (500 bodies stay `Internal server error`, details only in the server log).
+- **Proxy trust**: `TRUST_PROXY=false` by default, so `X-Forwarded-For` is ignored and client IPs come from the socket. Turn it on only behind a reverse proxy - otherwise IP limits are spoofable, and leaving it on without one makes every user share the proxy's IP.
+- **Counters are per process**: the stores are in memory and prune expired entries as they age out, but they reset on restart and are not shared between workers. Scale vertically or swap the stores for Redis when running multiple instances.
 
 ## Architecture
 

@@ -4,9 +4,12 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use App\Http\Middleware\AuthenticateApi;
+use App\Http\Middleware\GlobalRateLimit;
+use App\Http\Middleware\LimitRequestBody;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\NormalizeJson;
 use App\Http\Middleware\RejectMalformedJson;
+use App\Http\Middleware\SecurityHeaders;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,11 +19,16 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->trustProxies(at: '*');
+        // X-Forwarded-For is only trusted when explicitly enabled.
+        // (env() is correct here: the middleware callback runs before config loads.)
+        $middleware->trustProxies(at: filter_var(env('TRUST_PROXY', false), FILTER_VALIDATE_BOOL) ? '*' : []);
+        $middleware->append(SecurityHeaders::class);
+        $middleware->append(GlobalRateLimit::class);
         $middleware->alias([
             'api.jwt' => AuthenticateApi::class,
             'api.admin' => RequireAdmin::class,
         ]);
+        $middleware->appendToGroup('api', LimitRequestBody::class);
         $middleware->appendToGroup('api', RejectMalformedJson::class);
         $middleware->appendToGroup('api', NormalizeJson::class);
         $middleware->appendToGroup('web', NormalizeJson::class);

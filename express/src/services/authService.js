@@ -1,6 +1,6 @@
 import { User } from '../models/index.js';
 import ApiError from '../utils/ApiError.js';
-import { verifyPassword } from '../utils/password.js';
+import { verifyPassword, DUMMY_PASSWORD_HASH } from '../utils/password.js';
 import { issueTokenPair, verifyRefreshToken, ttlSecondsFrom } from '../utils/jwt.js';
 import { blacklistToken } from '../utils/tokenBlacklist.js';
 import env from '../config/env.js';
@@ -20,6 +20,9 @@ export async function login({ email, password }) {
   const user = await User.unscoped().findOne({ where: { email } });
 
   if (!user) {
+    // Spend comparable time on unknown accounts so timing cannot be used to
+    // probe which emails are registered. One generic 401 for every failure.
+    await verifyPassword(password, DUMMY_PASSWORD_HASH);
     throw ApiError.unauthorized('These credentials do not match our records');
   }
 

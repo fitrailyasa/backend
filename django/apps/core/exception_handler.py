@@ -15,7 +15,7 @@ def api_exception_handler(exc, context):
         body = {'success': False, 'message': exc.message}
         if exc.status_code == 422 and exc.errors:
             body['errors'] = exc.errors
-        return Response(body, status=exc.status_code)
+        return Response(body, status=exc.status_code, headers=getattr(exc, 'headers', None))
 
     if isinstance(exc, (ParseError, UnsupportedMediaType)):
         return Response({'success': False, 'message': 'Invalid JSON payload'}, status=400)
@@ -41,7 +41,7 @@ def api_exception_handler(exc, context):
         body = {'success': False, 'message': message}
         if status_code == 422 and isinstance(detail, dict):
             body['errors'] = detail
-        return Response(body, status=status_code)
+        return Response(body, status=status_code, headers=response.headers)
 
     logger.exception('Unhandled error on %s', getattr(context.get('request'), 'path', '-'), exc_info=exc)
     return Response({'success': False, 'message': 'Internal server error'}, status=500)

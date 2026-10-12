@@ -9,10 +9,11 @@ module Respondable
     render_success(message, data, status: 201)
   end
 
-  def render_error(message, status:, errors: nil)
+  def render_error(message, status:, errors: nil, headers: nil)
     code = status.is_a?(Integer) ? status : Rack::Utils.status_code(status)
     body = { success: false, message: message }
     body[:errors] = errors if code == 422 && errors.present?
+    (headers || {}).each { |name, value| response.set_header(name, value) }
     render json: body, status: code
   end
 end

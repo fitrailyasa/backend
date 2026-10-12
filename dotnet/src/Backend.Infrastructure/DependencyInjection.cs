@@ -7,6 +7,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Backend.Infrastructure;
 
@@ -16,6 +17,7 @@ public static class DependencyInjection
     {
         services.AddMemoryCache();
         services.Configure<JwtOptions>(options => configuration.GetSection(JwtOptions.SectionName).Bind(options));
+        services.Configure<LoginRateLimitOptions>(options => configuration.GetSection(LoginRateLimitOptions.SectionName).Bind(options));
         var providerName = configuration["Database:Provider"] ?? "MySql";
         if (providerName.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
         {
@@ -49,6 +51,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddSingleton<ITokenBlacklist, MemoryTokenBlacklist>();
         services.AddSingleton<IJwtTokenService, JwtTokenService>();
+        services.AddSingleton<ILoginAttemptService>(provider => new LoginAttemptService(provider.GetRequiredService<IOptions<LoginRateLimitOptions>>().Value));
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ICategoryService, CategoryService>();

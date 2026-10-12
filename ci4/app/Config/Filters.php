@@ -14,7 +14,11 @@ use CodeIgniter\Filters\PerformanceMetrics;
 use CodeIgniter\Filters\SecureHeaders;
 use App\Filters\ApiAuthFilter;
 use App\Filters\ApiAdminFilter;
+use App\Filters\BodyLimitFilter;
+use App\Filters\LoginRateLimitFilter;
 use App\Filters\NormalizeJsonFilter;
+use App\Filters\RateLimitFilter;
+use App\Filters\SecurityHeadersFilter;
 
 class Filters extends BaseFilters
 {
@@ -28,18 +32,22 @@ class Filters extends BaseFilters
      * or [filter_name => [classname1, classname2, ...]]
      */
     public array $aliases = [
-        'csrf'          => CSRF::class,
-        'toolbar'       => DebugToolbar::class,
-        'honeypot'      => Honeypot::class,
-        'invalidchars'  => InvalidChars::class,
-        'secureheaders' => SecureHeaders::class,
-        'cors'          => Cors::class,
-        'forcehttps'    => ForceHTTPS::class,
-        'pagecache'     => PageCache::class,
-        'performance'   => PerformanceMetrics::class,
-        'api-auth'      => ApiAuthFilter::class,
-        'api-admin'     => ApiAdminFilter::class,
-        'normalize-json' => NormalizeJsonFilter::class,
+        'csrf'            => CSRF::class,
+        'toolbar'         => DebugToolbar::class,
+        'honeypot'        => Honeypot::class,
+        'invalidchars'    => InvalidChars::class,
+        'secureheaders'   => SecureHeaders::class,
+        'cors'            => Cors::class,
+        'forcehttps'      => ForceHTTPS::class,
+        'pagecache'       => PageCache::class,
+        'performance'     => PerformanceMetrics::class,
+        'api-auth'        => ApiAuthFilter::class,
+        'api-admin'       => ApiAdminFilter::class,
+        'normalize-json'  => NormalizeJsonFilter::class,
+        'securityheaders' => SecurityHeadersFilter::class,
+        'ratelimit'       => RateLimitFilter::class,
+        'loginratelimit'  => LoginRateLimitFilter::class,
+        'bodylimit'       => BodyLimitFilter::class,
     ];
 
     /**
@@ -59,10 +67,14 @@ class Filters extends BaseFilters
         'before' => [
             'forcehttps', // Force Global Secure Requests
             'pagecache',  // Web Page Caching
+            // CORS must run before routing: an OPTIONS preflight has no route,
+            // so a global before-filter would never see it (PageNotFoundException).
+            'cors',
         ],
         'after' => [
             'pagecache',   // Web Page Caching
             'performance', // Performance Metrics
+            'securityheaders', // Security headers on every response, even the ones short-circuited by a before filter
         ],
     ];
 
@@ -77,6 +89,11 @@ class Filters extends BaseFilters
      */
     public array $globals = [
         'before' => [
+            // Security headers first so every response carries them, even
+            // when a later filter short-circuits with a 401/429.
+            'securityheaders',
+            'ratelimit',
+            'bodylimit',
             // 'honeypot',
             // 'csrf',
             // 'invalidchars',

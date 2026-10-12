@@ -1,8 +1,12 @@
+from django.contrib.auth.hashers import check_password, make_password
+
 from apps.accounts.models import User
 from apps.accounts.serializers import serialize_user
 from apps.accounts.tokens import issue_token_pair
+
 from apps.core.exceptions import ApiError
 from apps.core.listing import apply_search, apply_sort, paginate, parse_list_query, raise_if_errors
+from apps.core.ratelimit import enforce_login_rate_limit, record_login_failure, reset_login_rate_limit
 from apps.core.validate import (
     add_email,
     add_password,
@@ -13,6 +17,10 @@ from apps.core.validate import (
 )
 
 USER_SORTABLE = ['id', 'name', 'email', 'role', 'created_at', 'updated_at']
+
+INVALID_CREDENTIALS_MESSAGE = 'These credentials do not match our records'
+
+_DUMMY_HASH = None
 
 
 def _email_taken(email, exclude_id=None):
@@ -68,11 +76,26 @@ def validate_login(data):
     return email, password
 
 
-def login(data):
+def _dummy_hash():
+    """Fixed hash for timing-safe compares when the email does not exist."""
+    global _DUMMY_HASH
+    if _DUMMY_HASH is None:
+        _DUMMY_HASH = make_password('timing-equalization-placeholder')
+    return _DUMMY_HASH
+
+
+def login(data, ip='unknown'):
     email, password = validate_login(data)
+    enforce_login_rate_limit(email, ip)
     user = User.objects.filter(email=email).first()
-    if user is None or not user.check_password(password):
-        raise ApiError.unauthorized('These credentials do not match our records')
+    if user is None:
+        check_password(password, _dummy_hash())
+        record_login_failure(email, ip)
+        raise ApiError.unauthorized(INVALID_CREDENTIALS_MESSAGE)
+    if not user.check_password(password):
+        record_login_failure(email, ip)
+        raise ApiError.unauthorized(INVALID_CREDENTIALS_MESSAGE)
+    reset_login_rate_limit(email)
     return auth_payload(user)
 
 

@@ -35,6 +35,25 @@ const swaggerHtml = swaggerUi
   .generateHTML(swaggerDocument, swaggerOptions)
   .replaceAll("./", `${prefix}/docs/`);
 
+// The app-wide CSP is `default-src 'none'` (it is a JSON API). Swagger UI is
+// HTML served from this same app and genuinely needs inline scripts and styles,
+// so /docs relaxes the policy to itself plus inline bootstrap only.
+const DOCS_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+function docsSecurityPolicy(_req, res, next) {
+  res.setHeader("Content-Security-Policy", DOCS_CSP);
+  next();
+}
+
 router.get("/", (req, res) =>
   ok(res, "API index retrieved", {
     ...routesIndex,
@@ -51,11 +70,11 @@ function sendSwagger(_req, res) {
   res.status(200).type("html").send(swaggerHtml);
 }
 
-router.get("/docs", sendSwagger);
+router.get("/docs", docsSecurityPolicy, sendSwagger);
 // The stock Swagger file points at petstore.swagger.io. Serve the local UI instead.
-router.get("/docs/index.html", sendSwagger);
+router.get("/docs/index.html", docsSecurityPolicy, sendSwagger);
 
-router.use("/docs", ...swaggerUi.serve);
+router.use("/docs", docsSecurityPolicy, ...swaggerUi.serve);
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);

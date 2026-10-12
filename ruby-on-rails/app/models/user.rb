@@ -1,5 +1,8 @@
 class User < ApplicationRecord
   ROLES = %w[user admin].freeze
+  # Fixed bcrypt hash compared against when the email does not exist, so a
+  # timing measurement cannot reveal whether an account is registered.
+  DUMMY_PASSWORD_HASH = "$2a$10$qmMU69Z6V45z2NfZsKtfmubjL.xNR4.p4Fsm/ONbiQsu49wCT8VUW"
 
   enum :role, { user: "user", admin: "admin" }, validate: true, default: "user"
 
@@ -19,6 +22,14 @@ class User < ApplicationRecord
     stored = password.to_s
     stored = stored.delete_prefix("bcrypt$") if stored.start_with?("bcrypt$")
     BCrypt::Password.new(stored).is_password?(plain)
+  rescue BCrypt::Errors::InvalidHash
+    false
+  end
+
+  def self.password_matches_dummy?(plain)
+    return false if plain.blank?
+
+    BCrypt::Password.new(DUMMY_PASSWORD_HASH) == plain
   rescue BCrypt::Errors::InvalidHash
     false
   end

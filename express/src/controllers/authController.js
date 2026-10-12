@@ -2,6 +2,7 @@ import * as authService from '../services/authService.js';
 import ApiError from '../utils/ApiError.js';
 import { created, ok } from '../utils/ApiResponse.js';
 import asyncHandler from '../middleware/asyncHandler.js';
+import { clearLoginFailures, recordLoginFailure } from '../middleware/loginRateLimit.js';
 
 export const register = asyncHandler(async (req, res) => {
   const result = await authService.register(req.body);
@@ -9,8 +10,18 @@ export const register = asyncHandler(async (req, res) => {
 });
 
 export const login = asyncHandler(async (req, res) => {
-  const result = await authService.login(req.body);
-  return ok(res, 'Login successful', result);
+  // Set by the loginRateLimit middleware with the normalized email and IP.
+  const attempt = req.loginAttempt ?? {};
+  try {
+    const result = await authService.login(req.body);
+    clearLoginFailures(attempt.email);
+    return ok(res, 'Login successful', result);
+  } catch (error) {
+    if (error instanceof ApiError && error.statusCode === 401) {
+      recordLoginFailure(attempt);
+    }
+    throw error;
+  }
 });
 
 export const refresh = asyncHandler(async (req, res) => {

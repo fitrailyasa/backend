@@ -8,8 +8,13 @@ public class AppProperties {
     private boolean seed = false;
     private String corsOrigins = "*";
     private int bcryptRounds = 10;
+    private boolean trustProxy = false;
+    private boolean enableHsts = false;
+    private long bodyLimit = 102_400L;
     private final Jwt jwt = new Jwt();
     private final RateLimit rateLimit = new RateLimit();
+    private final AuthRateLimit authRateLimit = new AuthRateLimit();
+    private final LoginRateLimit loginRateLimit = new LoginRateLimit();
 
     public boolean isSeed() {
         return seed;
@@ -35,12 +40,44 @@ public class AppProperties {
         this.bcryptRounds = bcryptRounds;
     }
 
+    public boolean isTrustProxy() {
+        return trustProxy;
+    }
+
+    public void setTrustProxy(boolean trustProxy) {
+        this.trustProxy = trustProxy;
+    }
+
+    public boolean isEnableHsts() {
+        return enableHsts;
+    }
+
+    public void setEnableHsts(boolean enableHsts) {
+        this.enableHsts = enableHsts;
+    }
+
+    public long getBodyLimit() {
+        return bodyLimit;
+    }
+
+    public void setBodyLimit(long bodyLimit) {
+        this.bodyLimit = bodyLimit;
+    }
+
     public Jwt getJwt() {
         return jwt;
     }
 
     public RateLimit getRateLimit() {
         return rateLimit;
+    }
+
+    public AuthRateLimit getAuthRateLimit() {
+        return authRateLimit;
+    }
+
+    public LoginRateLimit getLoginRateLimit() {
+        return loginRateLimit;
     }
 
     public static class Jwt {
@@ -121,7 +158,39 @@ public class AppProperties {
         }
     }
 
+    /** Global per-IP request limit applied to every route (RATE_LIMIT_*). */
     public static class RateLimit {
+        private long windowMs = 60_000L;
+        private int max = 300;
+        private boolean enabled = true;
+
+        public long getWindowMs() {
+            return windowMs;
+        }
+
+        public void setWindowMs(long windowMs) {
+            this.windowMs = windowMs;
+        }
+
+        public int getMax() {
+            return max;
+        }
+
+        public void setMax(int max) {
+            this.max = max;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+    }
+
+    /** Stricter per-IP limit kept on the auth routes (AUTH_RATE_LIMIT_*). */
+    public static class AuthRateLimit {
         private long windowMs = 900_000L;
         private int max = 100;
 
@@ -139,6 +208,46 @@ public class AppProperties {
 
         public void setMax(int max) {
             this.max = max;
+        }
+    }
+
+    /** Failed-login limiter: sliding windows over normalized email and client IP (LOGIN_*_RATE_LIMIT_*). */
+    public static class LoginRateLimit {
+        private int max = 3;
+        private long windowMs = 900_000L;
+        private int ipMax = 10;
+        private long ipWindowMs = 900_000L;
+
+        public int getMax() {
+            return max;
+        }
+
+        public void setMax(int max) {
+            this.max = max;
+        }
+
+        public long getWindowMs() {
+            return windowMs;
+        }
+
+        public void setWindowMs(long windowMs) {
+            this.windowMs = windowMs;
+        }
+
+        public int getIpMax() {
+            return ipMax;
+        }
+
+        public void setIpMax(int ipMax) {
+            this.ipMax = ipMax;
+        }
+
+        public long getIpWindowMs() {
+            return ipWindowMs;
+        }
+
+        public void setIpWindowMs(long ipWindowMs) {
+            this.ipWindowMs = ipWindowMs;
         }
     }
 }

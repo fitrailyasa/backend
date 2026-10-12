@@ -1,5 +1,6 @@
 package com.backend.starter;
 
+import com.backend.starter.security.LoginAttemptService;
 import com.backend.starter.user.entity.Role;
 import com.backend.starter.user.entity.User;
 import com.backend.starter.user.repo.UserRepository;
@@ -44,8 +45,12 @@ class ApiIntegrationTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private LoginAttemptService loginAttemptService;
+
     @BeforeEach
     void seedAdmin() {
+        loginAttemptService.resetLoginRateLimits();
         if (userRepository.findByEmailIgnoreCase("admin@example.com").isPresent()) {
             return;
         }

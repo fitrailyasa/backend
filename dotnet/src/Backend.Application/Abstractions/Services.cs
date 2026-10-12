@@ -31,6 +31,15 @@ public interface IAuthService
     Task<UserDto> MeAsync(long userId, CancellationToken cancellationToken);
 }
 
+public interface ILoginAttemptService
+{
+    // Returns 0 when the attempt is allowed, otherwise the seconds to wait (>= 1).
+    int RetryAfter(string email, string clientIp);
+    void RecordFailure(string email, string clientIp);
+    void Reset(string email);
+    void Reset();
+}
+
 public interface IUserService
 {
     Task<PagedResult<UserDto>> ListAsync(UserListQuery query, CancellationToken cancellationToken);

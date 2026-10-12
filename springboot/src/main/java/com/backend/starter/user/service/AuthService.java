@@ -4,6 +4,7 @@ import com.backend.starter.common.ApiException;
 import com.backend.starter.common.Checks;
 import com.backend.starter.common.FieldErrors;
 import com.backend.starter.security.JwtService;
+import com.backend.starter.security.LoginAttemptService;
 import com.backend.starter.security.TokenBlacklist;
 import com.backend.starter.user.dto.UserDtos.AuthResponse;
 import com.backend.starter.user.dto.UserDtos.LoginRequest;
@@ -20,16 +21,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
+    /** One generic message for wrong email and wrong password alike. */
+    private static final String INVALID_CREDENTIALS = "These credentials do not match our records";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenBlacklist tokenBlacklist;
+    private final LoginAttemptService loginAttemptService;
+    /** Compared against when the email does not exist so timing cannot reveal account existence. */
+    private final String dummyHash;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService, TokenBlacklist tokenBlacklist) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       TokenBlacklist tokenBlacklist, LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.tokenBlacklist = tokenBlacklist;
+        this.loginAttemptService = loginAttemptService;
+        this.dummyHash = passwordEncoder.encode("timing-decoy-not-a-real-password");
     }
 
     @Transactional
@@ -53,17 +63,34 @@ public class AuthService {
     }
 
     @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String clientIp) {
         FieldErrors errors = new FieldErrors();
         String email = Checks.requiredEmail(errors, request.getEmail());
         if (request.getPassword() == null || request.getPassword().isEmpty()) {
             errors.add("password", "Password is required.");
         }
         errors.throwIfAny();
-        User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
-        if (user == null || !passwordMatches(request.getPassword(), user.getPassword())) {
-            throw ApiException.unauthorized("These credentials do not match our records");
+
+        // Lock check happens before any hash is touched: a locked account must not spend time
+        // verifying credentials (and must not reveal whether the password was right).
+        long retryAfter = loginAttemptService.check(email, clientIp);
+        if (retryAfter > 0) {
+            throw ApiException.tooManyLoginAttempts(retryAfter);
         }
+
+        User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        boolean valid;
+        if (user == null) {
+            passwordEncoder.matches(request.getPassword(), dummyHash);
+            valid = false;
+        } else {
+            valid = passwordMatches(request.getPassword(), user.getPassword());
+        }
+        if (!valid) {
+            loginAttemptService.recordFailure(email, clientIp);
+            throw ApiException.unauthorized(INVALID_CREDENTIALS);
+        }
+        loginAttemptService.resetForEmail(email);
         return tokens(user);
     }
 

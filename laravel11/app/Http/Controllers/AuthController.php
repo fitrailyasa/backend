@@ -4,11 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Support\JwtToken;
+use App\Support\LoginRateLimiter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    /**
+     * Fixed bcrypt hash compared against when the email does not exist, so the
+     * response time does not reveal whether an account is registered.
+     */
+    private const DUMMY_HASH = '$2y$12$8PS1sQY/P.Jg7/XfoNNn1uHVWasuKviUiPZa77bCbh1VBjGorAMPG';
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -31,17 +38,38 @@ class AuthController extends Controller
         return $this->tokenResponse($user->fresh()->toRawObject(), 201);
     }
 
-    public function login(Request $request)
+    public function login(Request $request, LoginRateLimiter $limiter)
     {
         $validator = Validator::make($request->all(), [
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
         ], $this->accountMessages());
         if ($validator->fails()) return $this->invalid($validator->errors()->toArray());
+
+        $email = LoginRateLimiter::normalizeEmail((string) $request->input('email'));
+        $ip = (string) $request->ip();
+
+        // Lock check runs before any password hashing/verification.
+        $retryAfter = $limiter->retryAfter($email, $ip);
+        if ($retryAfter !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Too many failed login attempts. Please try again later.',
+            ], 429)->header('Retry-After', (string) $retryAfter);
+        }
+
         $user = User::query()->where('email', $request->input('email'))->first();
-        if (!$user || !$user->passwordMatches((string) $request->input('password'))) {
+        $password = (string) $request->input('password');
+        $valid = $user !== null
+            ? $user->passwordMatches($password)
+            : (password_verify($password, self::DUMMY_HASH) && false);
+
+        if (!$valid) {
+            $limiter->recordFailure($email, $ip);
             return response()->json(['success' => false, 'message' => 'These credentials do not match our records'], 401);
         }
+
+        $limiter->clearEmail($email);
         return $this->tokenResponse($user->toRawObject());
     }
 

@@ -13,6 +13,10 @@ spring:
   mvc:
     problemdetails:
       enabled: false
+  servlet:
+    multipart:
+      max-file-size: 100KB
+      max-request-size: 100KB
   web:
     resources:
       add-mappings: false
@@ -48,8 +52,11 @@ springdoc:
 
 app:
   seed: ${APP_SEED:false}
-  cors-origins: ${CORS_ORIGIN:*}
+  cors-origins: ${CORS_ORIGINS:${CORS_ORIGIN:http://localhost:3000,http://localhost:5173,http://localhost:4200}}
   bcrypt-rounds: ${BCRYPT_ROUNDS:10}
+  trust-proxy: ${TRUST_PROXY:false}
+  enable-hsts: ${ENABLE_HSTS:false}
+  body-limit: ${BODY_LIMIT:102400}
   jwt:
     secret: ${JWT_SECRET:change-me-to-a-secret-at-least-32-chars}
     access-secret: ${JWT_ACCESS_SECRET:}
@@ -59,5 +66,14 @@ app:
     issuer: ${JWT_ISSUER:backend-starter}
     audience: ${JWT_AUDIENCE:backend-starter-clients}
   rate-limit:
-    window-ms: ${RATE_LIMIT_WINDOW_MS:900000}
-    max: ${RATE_LIMIT_MAX:100}
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    window-ms: ${RATE_LIMIT_WINDOW_MS:60000}
+    max: ${RATE_LIMIT_MAX:300}
+  auth-rate-limit:
+    window-ms: ${AUTH_RATE_LIMIT_WINDOW_MS:900000}
+    max: ${AUTH_RATE_LIMIT_MAX:100}
+  login-rate-limit:
+    max: ${LOGIN_RATE_LIMIT_MAX:3}
+    window-ms: ${LOGIN_RATE_LIMIT_WINDOW_MS:900000}
+    ip-max: ${LOGIN_IP_RATE_LIMIT_MAX:10}
+    ip-window-ms: ${LOGIN_IP_RATE_LIMIT_WINDOW_MS:900000}

@@ -206,7 +206,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
         log.info("Seeded demo data: users={}, categories={}, tags={}, products={}, orders={}, comments={}",
                 users.size(), categories.size(), tags.size(), products.size(), orders.size(), comments.size());
-        log.info("Admin login -> admin@example.com / password");
+        log.info("Seeded admin account: admin@example.com (login password documented in README.md)");
     }
 
     private User user(String name, String email, String password, Role role) {

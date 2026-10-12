@@ -90,4 +90,17 @@ describe('AllExceptionsFilter', () => {
     expect(result.status).toBe(500);
     expect(result.body).toEqual({ success: false, message: 'Internal server error.' });
   });
+
+  it('turns a body-parser payload error into its 4xx envelope', () => {
+    const error = Object.assign(new Error('request entity too large'), {
+      status: 413,
+      statusCode: 413,
+      type: 'entity.too.large',
+    });
+
+    const result = run(error);
+
+    expect(result.status).toBe(413);
+    expect(result.body).toEqual({ success: false, message: 'Request entity too large' });
+  });
 });

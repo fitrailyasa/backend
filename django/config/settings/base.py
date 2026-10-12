@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import environ
@@ -51,7 +52,10 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'apps.core.middleware.SecurityHeadersMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'apps.core.middleware.RateLimitMiddleware',
+    'apps.core.middleware.BodyLimitMiddleware',
     'django.middleware.common.CommonMiddleware',
 ]
 
@@ -107,16 +111,43 @@ JWT_AUDIENCE = _raw('JWT_AUDIENCE', 'backend-starter-clients')
 PAGINATION_LIMIT = _int('PAGINATION_LIMIT', 10)
 PAGINATION_MAX_LIMIT = _int('PAGINATION_MAX_LIMIT', 100)
 
-RATE_LIMIT_WINDOW_MS = _int('RATE_LIMIT_WINDOW_MS', 900000)
-RATE_LIMIT_MAX = _int('RATE_LIMIT_MAX', 100)
+# Rate limiting must never flake the test suite.
+_TEST_ENV = 'pytest' in sys.modules or 'test' in sys.argv
 
-_cors = _raw('CORS_ORIGIN', '*')
-if _cors == '*':
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = [item.strip() for item in _cors.split(',') if item.strip()]
+# Global limit for all routes (except /health and the route index), per client IP.
+RATE_LIMIT_WINDOW_MS = _int('RATE_LIMIT_WINDOW_MS', 60000)
+RATE_LIMIT_MAX = _int('RATE_LIMIT_MAX', 300)
+RATE_LIMIT_ENABLED = _bool('RATE_LIMIT_ENABLED', True) and not _TEST_ENV
+
+# Login lockout: failed credential checks per normalized email, then per client IP.
+LOGIN_RATE_LIMIT_MAX = _int('LOGIN_RATE_LIMIT_MAX', 3)
+LOGIN_RATE_LIMIT_WINDOW_MS = _int('LOGIN_RATE_LIMIT_WINDOW_MS', 900000)
+LOGIN_IP_RATE_LIMIT_MAX = _int('LOGIN_IP_RATE_LIMIT_MAX', 10)
+LOGIN_IP_RATE_LIMIT_WINDOW_MS = _int('LOGIN_IP_RATE_LIMIT_WINDOW_MS', 900000)
+
+# Cap on JSON request bodies, in bytes (102400 = 100kb). 0 disables the cap.
+BODY_LIMIT = _int('BODY_LIMIT', 102400)
+
+# Only trust X-Forwarded-For / X-Forwarded-Proto when behind a reverse proxy.
+TRUST_PROXY = _bool('TRUST_PROXY', False)
+if TRUST_PROXY:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Strict-Transport-Security is sent only for HTTPS requests when enabled.
+ENABLE_HSTS = _bool('ENABLE_HSTS', False)
+
+# CORS: a concrete allowlist, never '*' together with credentials. An explicit
+# '*' (or an empty value) falls back to the dev allowlist below.
+_cors = _raw('CORS_ORIGINS') or _raw('CORS_ORIGIN') or ''
+_cors_list = [item.strip() for item in _cors.split(',') if item.strip() and item.strip() != '*']
+CORS_ALLOWED_ORIGINS = _cors_list or [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:4200',
+]
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
+CORS_PREFLIGHT_MAX_AGE = 600
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

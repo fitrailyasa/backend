@@ -9,11 +9,17 @@ public class ApiException extends RuntimeException {
 
     private final int status;
     private final Map<String, List<String>> errors;
+    private final Long retryAfterSeconds;
 
     public ApiException(int status, String message, Map<String, List<String>> errors) {
+        this(status, message, errors, null);
+    }
+
+    public ApiException(int status, String message, Map<String, List<String>> errors, Long retryAfterSeconds) {
         super(message);
         this.status = status;
         this.errors = errors;
+        this.retryAfterSeconds = retryAfterSeconds;
     }
 
     public int getStatus() {
@@ -22,6 +28,11 @@ public class ApiException extends RuntimeException {
 
     public Map<String, List<String>> getErrors() {
         return errors;
+    }
+
+    /** Value for the {@code Retry-After} header, or {@code null} when the exception carries none. */
+    public Long getRetryAfterSeconds() {
+        return retryAfterSeconds;
     }
 
     public static ApiException of(HttpStatus status, String message) {
@@ -54,5 +65,14 @@ public class ApiException extends RuntimeException {
 
     public static ApiException tooManyRequests(String message) {
         return of(HttpStatus.TOO_MANY_REQUESTS, message);
+    }
+
+    public static ApiException tooManyLoginAttempts(long retryAfterSeconds) {
+        return new ApiException(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "Too many failed login attempts. Please try again later.",
+                null,
+                retryAfterSeconds
+        );
     }
 }

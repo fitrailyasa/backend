@@ -83,4 +83,21 @@ class Security extends BaseConfig
      * @see https://codeigniter4.github.io/userguide/libraries/security.html#redirection-on-failure
      */
     public bool $redirect = (ENVIRONMENT === 'production');
+
+    /**
+     * --------------------------------------------------------------------------
+     * HTTP Strict Transport Security
+     * --------------------------------------------------------------------------
+     *
+     * Send the Strict-Transport-Security header, but only on HTTPS requests.
+     * Controlled by the ENABLE_HSTS environment variable (default: false).
+     */
+    public bool $enableHsts = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->enableHsts = filter_var(env('ENABLE_HSTS', $this->enableHsts), FILTER_VALIDATE_BOOLEAN);
+    }
 }

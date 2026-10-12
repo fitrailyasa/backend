@@ -2,10 +2,13 @@ import { Injectable, UnauthorizedException, UnprocessableEntityException } from 
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectDataSource } from '@nestjs/typeorm';
+import type { Request } from 'express';
 import { randomUUID } from 'node:crypto';
 import { DataSource, Repository } from 'typeorm';
 import { UserRole } from '../common/decorators/roles.decorator';
-import { hashPassword, verifyPassword } from '../common/utils/password';
+import { LoginRateLimitService } from '../common/security/login-rate-limit.service';
+import { normalizeEmail } from '../common/security/login-rate-limit.store';
+import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from '../common/utils/password';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
@@ -53,6 +56,7 @@ export class AuthService {
     @InjectDataSource() private readonly dataSource: DataSource,
     private readonly config: ConfigService,
     private readonly jwt: JwtService,
+    private readonly loginRateLimit: LoginRateLimitService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthTokens> {
@@ -82,12 +86,24 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async login(dto: LoginDto): Promise<AuthTokens> {
-    const user = await this.findByEmail(dto.email, true);
+  async login(dto: LoginDto, request?: Request): Promise<AuthTokens> {
+    const email = normalizeEmail(dto.email);
+    const ip = request?.ip ?? 'unknown';
 
-    if (!user || !(await verifyPassword(dto.password, user.password))) {
+    const user = await this.findByEmail(email, true);
+    const matches = user
+      ? await verifyPassword(dto.password, user.password)
+      : // unknown email: still spend a bcrypt comparison so the timing does not
+        // reveal whether the account exists
+        await verifyPassword(dto.password, DUMMY_PASSWORD_HASH);
+
+    if (!user || !matches) {
+      this.loginRateLimit.recordFailure(email, ip);
+      // one generic message for "wrong email" and "wrong password" alike
       throw new UnauthorizedException('These credentials do not match our records');
     }
+
+    this.loginRateLimit.reset(email, ip);
 
     return this.issueTokens(user);
   }

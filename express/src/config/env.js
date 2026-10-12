@@ -52,6 +52,15 @@ function list(key, fallback) {
     .filter(Boolean);
 }
 
+// Express accepts `false`, `true`, a hop count, or any proxy definition string.
+function proxyTrust(raw) {
+  const normalized = String(raw).trim().toLowerCase();
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  if (['true', 'yes', 'on'].includes(normalized)) return true;
+  if (/^\d+$/.test(normalized)) return Number(normalized);
+  return raw;
+}
+
 const nodeEnv = str('NODE_ENV', 'development');
 const isProduction = nodeEnv === 'production';
 const isTest = nodeEnv === 'test';
@@ -66,8 +75,15 @@ if (jwtSecret && jwtSecret.length < 32 && !isTest) {
   errors.push('JWT_SECRET must be at least 32 characters long');
 }
 
-const corsOriginRaw = str('CORS_ORIGIN', '*');
-const corsOrigin = corsOriginRaw === '*' ? '*' : list('CORS_ORIGIN', []);
+// Never combine `*` with credentialed requests: a wildcard (or an empty list)
+// falls back to the local development allow-list instead.
+const DEFAULT_CORS_ORIGINS = Object.freeze([
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:4200',
+]);
+const corsRaw = list('CORS_ORIGINS', list('CORS_ORIGIN', [...DEFAULT_CORS_ORIGINS]));
+const corsOrigins = corsRaw.includes('*') || corsRaw.length === 0 ? [...DEFAULT_CORS_ORIGINS] : corsRaw;
 
 if (errors.length > 0) {
   const details = errors.map((entry) => `  - ${entry}`).join('\n');
@@ -83,8 +99,10 @@ export const env = Object.freeze({
   host: str('HOST', '0.0.0.0'),
   apiPrefix: str('API_PREFIX', '/api/v1'),
   apiBaseUrl: str('API_BASE_URL', 'http://localhost:3000'),
-  corsOrigin,
-  bodyLimit: str('BODY_LIMIT', '1mb'),
+  corsOrigins,
+  bodyLimit: str('BODY_LIMIT', '100kb'),
+  trustProxy: proxyTrust(str('TRUST_PROXY', 'false')),
+  enableHsts: bool('ENABLE_HSTS', false),
   logFormat: str('LOG_FORMAT', isTest ? 'tiny' : 'dev'),
   logLevel: str('LOG_LEVEL', 'info'),
   requestIdHeader: str('REQUEST_ID_HEADER', 'X-Request-Id'),
@@ -128,8 +146,21 @@ export const env = Object.freeze({
   }),
 
   rateLimit: Object.freeze({
-    windowMs: int('RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000, { min: 1000 }),
-    max: int('RATE_LIMIT_MAX', 100, { min: 0 }),
+    enabled: bool('RATE_LIMIT_ENABLED', !isTest),
+    windowMs: int('RATE_LIMIT_WINDOW_MS', 60 * 1000, { min: 1000 }),
+    max: int('RATE_LIMIT_MAX', 300, { min: 0 }),
+  }),
+
+  authRateLimit: Object.freeze({
+    windowMs: int('AUTH_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000, { min: 1000 }),
+    max: int('AUTH_RATE_LIMIT_MAX', 100, { min: 0 }),
+  }),
+
+  loginRateLimit: Object.freeze({
+    max: int('LOGIN_RATE_LIMIT_MAX', 3, { min: 1 }),
+    windowMs: int('LOGIN_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000, { min: 1000 }),
+    ipMax: int('LOGIN_IP_RATE_LIMIT_MAX', 10, { min: 1 }),
+    ipWindowMs: int('LOGIN_IP_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000, { min: 1000 }),
   }),
 });
 

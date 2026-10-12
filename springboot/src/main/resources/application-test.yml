@@ -23,9 +23,21 @@ app:
     refresh-secret: ""
     expires-in: 3600
     refresh-expires-in: 604800
+  # Global limiter never runs in tests so suites cannot flake (spec section 2).
   rate-limit:
+    enabled: false
+    window-ms: 60000
+    max: 300
+  # Existing per-endpoint limiter stays active but effectively unlimited in tests.
+  auth-rate-limit:
     window-ms: 900000
-    max: 1000
+    max: 100000
+  # Pinned to the spec defaults so environment variables cannot break the suite.
+  login-rate-limit:
+    max: 3
+    window-ms: 900000
+    ip-max: 10
+    ip-window-ms: 900000
 
 logging:
   level:

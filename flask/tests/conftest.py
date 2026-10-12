@@ -5,7 +5,7 @@ import itertools
 import pytest
 
 from app import create_app
-from app.common.rate_limit import clear_rate_limits
+from app.common.rate_limit import clear_login_rate_limits, clear_rate_limits
 from app.config import TestingConfig
 from app.extensions import db, jwt
 
@@ -36,9 +36,11 @@ def client(app):
 def _reset_memory():
     jwt.clear_blacklist()
     clear_rate_limits()
+    clear_login_rate_limits()
     yield
     jwt.clear_blacklist()
     clear_rate_limits()
+    clear_login_rate_limits()
 
 
 @pytest.fixture

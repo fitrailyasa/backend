@@ -2,12 +2,18 @@ package httpapi
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/backend-starter/go/internal/model"
+	"github.com/backend-starter/go/internal/security"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// invalidCredentialsMessage is returned for both a wrong email and a wrong
+// password so the response never reveals which accounts exist.
+const invalidCredentialsMessage = "These credentials do not match our records"
 
 func (s *Server) register(c *gin.Context) {
 	body, ok := s.bind(c)
@@ -83,7 +89,7 @@ func (s *Server) login(c *gin.Context) {
 	}
 	errs := fieldErrors{}
 	email, emailOK := text(body, "email")
-	email = strings.ToLower(strings.TrimSpace(email))
+	email = security.NormalizeEmail(email)
 	if email == "" || !emailOK || !validEmail(email) {
 		errs.add("email", "The email must be a valid email address.")
 	}
@@ -95,12 +101,28 @@ func (s *Server) login(c *gin.Context) {
 		s.validation(c, errs)
 		return
 	}
-	var user model.User
-	err := s.db.Where("email = ?", email).First(&user).Error
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
-		s.fail(c, http.StatusUnauthorized, "These credentials do not match our records", nil)
+	ip := c.ClientIP()
+	// Reject locked accounts before any password hashing happens.
+	if wait, limited := s.loginLimiter.Check(email, ip); limited {
+		c.Header("Retry-After", strconv.FormatInt(security.RetryAfterSeconds(wait), 10))
+		s.fail(c, http.StatusTooManyRequests, "Too many failed login attempts. Please try again later.", nil)
 		return
 	}
+	var user model.User
+	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+		// Compare against a fixed dummy hash so an unknown email costs about
+		// the same time as a wrong password.
+		_ = bcrypt.CompareHashAndPassword([]byte(s.dummyHash), []byte(password))
+		s.loginLimiter.RecordFailure(email, ip)
+		s.fail(c, http.StatusUnauthorized, invalidCredentialsMessage, nil)
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)) != nil {
+		s.loginLimiter.RecordFailure(email, ip)
+		s.fail(c, http.StatusUnauthorized, invalidCredentialsMessage, nil)
+		return
+	}
+	s.loginLimiter.ResetEmail(email)
 	pair, err := s.issuePair(user)
 	if err != nil {
 		s.writeErr(c, err)

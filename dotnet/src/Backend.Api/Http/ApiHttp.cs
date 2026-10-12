@@ -225,9 +225,13 @@ public sealed class ExceptionHandlingMiddleware
         {
             await ApiErrors.WriteAsync(context.Response, exception.StatusCode, exception.Message, exception.Errors, context.RequestServices);
         }
-        catch (BadHttpRequestException)
+        catch (BadHttpRequestException exception)
         {
-            await ApiErrors.WriteAsync(context.Response, StatusCodes.Status400BadRequest, "Invalid JSON payload", null, context.RequestServices);
+            var status = exception.StatusCode == StatusCodes.Status413PayloadTooLarge
+                ? StatusCodes.Status413PayloadTooLarge
+                : StatusCodes.Status400BadRequest;
+            var message = status == StatusCodes.Status413PayloadTooLarge ? "Request body too large" : "Invalid JSON payload";
+            await ApiErrors.WriteAsync(context.Response, status, message, null, context.RequestServices);
         }
         catch (JsonException)
         {
@@ -280,25 +284,28 @@ public sealed class RateLimitMiddleware
     private static readonly object Gate = new();
     private static readonly Dictionary<string, (int Count, long Started)> Hits = new();
     private readonly RequestDelegate _next;
+    private readonly bool _enabled;
     private readonly int _limit;
     private readonly TimeSpan _window;
 
-    public RateLimitMiddleware(RequestDelegate next, IConfiguration configuration)
+    public RateLimitMiddleware(RequestDelegate next, IConfiguration configuration, IWebHostEnvironment environment)
     {
         _next = next;
-        _limit = configuration.GetValue("RateLimit:PermitLimit", 100);
-        _window = TimeSpan.FromSeconds(configuration.GetValue("RateLimit:WindowSeconds", 900));
+        _limit = configuration.GetValue("RateLimit:PermitLimit", 300);
+        _window = TimeSpan.FromSeconds(configuration.GetValue("RateLimit:WindowSeconds", 60));
+        // Never rate limit the test suites; they must stay deterministic.
+        _enabled = configuration.GetValue("RateLimit:Enabled", true) && !environment.IsEnvironment("Testing");
     }
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (_limit <= 0 || !IsAuthWrite(context.Request))
+        if (!_enabled || _limit <= 0 || IsExcluded(context.Request))
         {
             await _next(context);
             return;
         }
 
-        var key = $"{context.Connection.RemoteIpAddress}:{context.Request.Path}";
+        var key = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         int remaining;
         long reset;
@@ -341,17 +348,103 @@ public sealed class RateLimitMiddleware
         await _next(context);
     }
 
-    private static bool IsAuthWrite(HttpRequest request)
+    // 300 requests / 60s per IP on everything except the health probe and the route index.
+    private static bool IsExcluded(HttpRequest request)
     {
-        if (!HttpMethods.IsPost(request.Method))
+        var path = (request.Path.Value ?? string.Empty).TrimEnd('/');
+        return path.Equals("/health", StringComparison.OrdinalIgnoreCase)
+            || path.Equals("/api/v1", StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+public sealed class SecurityHeadersMiddleware
+{
+    private static readonly string[] FingerprintHeaders =
+    [
+        "Server", "X-Powered-By", "X-Sourcefiles", "X-AspNet-Version", "X-AspNetMvc-Version"
+    ];
+
+    private readonly RequestDelegate _next;
+    private readonly bool _hsts;
+
+    public SecurityHeadersMiddleware(RequestDelegate next, IConfiguration configuration)
+    {
+        _next = next;
+        _hsts = configuration.GetValue("Hsts:Enabled", false);
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var isDocs = (context.Request.Path.Value ?? string.Empty).StartsWith("/api/v1/docs", StringComparison.OrdinalIgnoreCase);
+        var contentSecurityPolicy = isDocs
+            // Swagger UI is served from this host: allow its own assets (relaxed, see README).
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+            : "default-src 'none'";
+        var hsts = _hsts;
+
+        context.Response.OnStarting(() =>
         {
-            return false;
+            var response = context.Response;
+            foreach (var header in FingerprintHeaders)
+            {
+                response.Headers.Remove(header);
+            }
+
+            response.Headers["X-Content-Type-Options"] = "nosniff";
+            response.Headers["X-Frame-Options"] = "DENY";
+            response.Headers["Referrer-Policy"] = "no-referrer";
+            response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
+            response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+            response.Headers["Content-Security-Policy"] = contentSecurityPolicy;
+            var hasOriginVary = response.Headers.TryGetValue("Vary", out var varyValues)
+                && varyValues
+                    .SelectMany(value => value?.Split(',') ?? [])
+                    .Any(value => value.Trim().Equals("Origin", StringComparison.OrdinalIgnoreCase));
+            if (!hasOriginVary)
+            {
+                if (response.Headers.ContainsKey("Vary"))
+                {
+                    response.Headers.Append("Vary", "Origin");
+                }
+                else
+                {
+                    response.Headers["Vary"] = "Origin";
+                }
+            }
+
+            if (hsts && context.Request.IsHttps)
+            {
+                response.Headers["Strict-Transport-Security"] = "max-age=31536000";
+            }
+
+            return Task.CompletedTask;
+        });
+
+        await _next(context);
+    }
+}
+
+public sealed class BodyLimitMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly long _maxBytes;
+
+    public BodyLimitMiddleware(RequestDelegate next, IConfiguration configuration)
+    {
+        _next = next;
+        _maxBytes = configuration.GetValue("BodyLimit:MaxBytes", 102400L);
+    }
+
+    public async Task InvokeAsync(HttpContext context)
+    {
+        var contentLength = context.Request.ContentLength;
+        if (_maxBytes > 0 && contentLength is not null && contentLength > _maxBytes)
+        {
+            // Envelope is written by ExceptionHandlingMiddleware.
+            throw new AppException(StatusCodes.Status413PayloadTooLarge, "Request body too large");
         }
 
-        var path = request.Path.Value ?? string.Empty;
-        return path.Equals("/api/v1/auth/register", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase)
-            || path.Equals("/api/v1/auth/refresh", StringComparison.OrdinalIgnoreCase);
+        await _next(context);
     }
 }
 
@@ -426,5 +519,41 @@ public static class DotEnv
         {
             configuration["Seed:Enabled"] = seed;
         }
+
+        // Security settings: real process environment wins over the .env file.
+        string? ReadEnv(string key)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            return string.IsNullOrWhiteSpace(value) && values.TryGetValue(key, out var fromFile) ? fromFile : value;
+        }
+
+        void ApplyEnv(string target, string key)
+        {
+            var value = ReadEnv(key);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                configuration[target] = value;
+            }
+        }
+
+        void ApplyEnvWindowSeconds(string target, string key)
+        {
+            if (long.TryParse(ReadEnv(key), out var milliseconds) && milliseconds > 0)
+            {
+                configuration[target] = Math.Max(1, milliseconds / 1000).ToString(CultureInfo.InvariantCulture);
+            }
+        }
+
+        ApplyEnv("RateLimit:Enabled", "RATE_LIMIT_ENABLED");
+        ApplyEnv("RateLimit:PermitLimit", "RATE_LIMIT_MAX");
+        ApplyEnvWindowSeconds("RateLimit:WindowSeconds", "RATE_LIMIT_WINDOW_MS");
+        ApplyEnv("LoginRateLimit:MaxAttempts", "LOGIN_RATE_LIMIT_MAX");
+        ApplyEnvWindowSeconds("LoginRateLimit:WindowSeconds", "LOGIN_RATE_LIMIT_WINDOW_MS");
+        ApplyEnv("LoginRateLimit:IpMaxAttempts", "LOGIN_IP_RATE_LIMIT_MAX");
+        ApplyEnvWindowSeconds("LoginRateLimit:IpWindowSeconds", "LOGIN_IP_RATE_LIMIT_WINDOW_MS");
+        ApplyEnv("Cors:Origins", "CORS_ORIGINS");
+        ApplyEnv("TrustProxy", "TRUST_PROXY");
+        ApplyEnv("Hsts:Enabled", "ENABLE_HSTS");
+        ApplyEnv("BodyLimit:MaxBytes", "BODY_LIMIT");
     }
 }

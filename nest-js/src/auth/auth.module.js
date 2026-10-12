@@ -7,6 +7,8 @@ const { User } = require('../users/entities/user.entity');
 const { AuthController } = require('./auth.controller');
 const { AuthService } = require('./auth.service');
 const { JwtStrategy } = require('./strategies/jwt.strategy');
+const { LoginRateLimitService } = require('../common/security/login-rate-limit.service');
+const { LoginRateLimitGuard } = require('../common/security/login-rate-limit.guard');
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ const { JwtStrategy } = require('./strategies/jwt.strategy');
   controllers: [AuthController],
   providers: [
     AuthService,
+    LoginRateLimitService,
+    LoginRateLimitGuard,
     {
       provide: JwtStrategy,
       inject: [ConfigService, AuthService],

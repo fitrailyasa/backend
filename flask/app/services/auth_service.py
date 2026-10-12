@@ -10,6 +10,13 @@ from app.extensions import db, jwt
 from app.models.user import User
 from app.services.user_service import create_user, get_user
 
+# One generic message for "unknown email" and "wrong password" alike.
+INVALID_CREDENTIALS = "These credentials do not match our records"
+
+# Fixed digest compared when the email does not exist so the response timing
+# does not reveal whether an account is registered.
+_DUMMY_HASH = "$2b$10$TztlD1zLCzq9jhelWJBMoOLJv9AnZEjZZMsPDxq5Gu./yG5ts2WDe"
+
 
 def issue_pair(user):
     return {
@@ -28,8 +35,12 @@ def register(payload):
 
 def login(email, password):
     user = db.session.scalar(select(User).where(User.email == email.strip().lower()))
-    if user is None or not verify_password(password, user.password):
-        raise ApiError(401, "These credentials do not match our records")
+    if user is None:
+        # Spend comparable time on unknown emails (timing side channel).
+        verify_password(password, _DUMMY_HASH)
+        raise ApiError(401, INVALID_CREDENTIALS)
+    if not verify_password(password, user.password):
+        raise ApiError(401, INVALID_CREDENTIALS)
     return issue_pair(user)
 
 

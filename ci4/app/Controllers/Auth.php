@@ -3,10 +3,18 @@
 namespace App\Controllers;
 
 use App\Libraries\JwtToken;
+use App\Libraries\RateLimiter;
 use App\Models\UserModel;
 
 class Auth extends BaseController
 {
+    /**
+     * Fixed bcrypt hash compared against when the account does not exist, so
+     * a wrong password and an unknown email spend comparable time and timing
+     * cannot reveal whether an account exists (the result is ignored).
+     */
+    private const DUMMY_HASH = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
+
     public function register()
     {
         $data = $this->input();
@@ -45,7 +53,17 @@ class Auth extends BaseController
             'password' => ['rules' => 'required|string', 'errors' => ['required' => 'Password is required.']],
         ])->run($data)) return $this->invalid($validation->getErrors());
         $user = model(UserModel::class, false)->builder()->where('email', $data['email'])->get()->getRow();
-        if (!$user || !$this->passwordMatches((string) $data['password'], (string) $user->password)) return $this->fail(401, 'These credentials do not match our records');
+        $password = (string) $data['password'];
+        if (!$user) {
+            password_verify($password, self::DUMMY_HASH); // timing only, result ignored
+            RateLimiter::recordLoginFailure((string) $data['email'], $this->request->getIPAddress());
+            return $this->fail(401, 'These credentials do not match our records');
+        }
+        if (!$this->passwordMatches($password, (string) $user->password)) {
+            RateLimiter::recordLoginFailure((string) $data['email'], $this->request->getIPAddress());
+            return $this->fail(401, 'These credentials do not match our records');
+        }
+        RateLimiter::clearLoginFailures((string) $data['email']);
         return $this->issue($user);
     }
 

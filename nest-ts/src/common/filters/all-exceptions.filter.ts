@@ -16,6 +16,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
   [HttpStatus.NOT_FOUND]: 'Resource not found.',
   [HttpStatus.CONFLICT]: 'Resource already exists.',
   [HttpStatus.UNPROCESSABLE_ENTITY]: 'Validation failed.',
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'Request entity too large',
   [HttpStatus.TOO_MANY_REQUESTS]: 'Too many requests.',
   [HttpStatus.INTERNAL_SERVER_ERROR]: 'Internal server error.',
 };
@@ -92,7 +93,30 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return { status: HttpStatus.BAD_REQUEST, message: 'Malformed JSON payload.' };
     }
 
+    // body-parser / http-errors style errors (e.g. 413 request entity too
+    // large) reach the filter as plain Errors carrying a 4xx status.
+    const clientError = this.clientError(exception);
+    if (clientError) {
+      return clientError;
+    }
+
     return { status: HttpStatus.INTERNAL_SERVER_ERROR, message: DEFAULT_MESSAGES[500] };
+  }
+
+  /** A plain (non HttpException) error that already knows it is the client's fault. */
+  private clientError(exception: unknown): NormalizedError | undefined {
+    if (typeof exception !== 'object' || exception === null) {
+      return undefined;
+    }
+
+    const { status, statusCode } = exception as { status?: unknown; statusCode?: unknown };
+    const code = Number(status ?? statusCode);
+
+    if (!Number.isInteger(code) || code < 400 || code >= 500) {
+      return undefined;
+    }
+
+    return { status: code, message: DEFAULT_MESSAGES[code] ?? 'Bad request.' };
   }
 
   private fromHttpException(exception: HttpException): NormalizedError {

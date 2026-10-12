@@ -84,7 +84,7 @@ export class UsersController {
 
   @Delete(':id')
   @Roles('admin')
-  @ResponseMessage('User deleted')
+  @ResponseMessage('User deleted successfully')
   @ApiParam({ name: 'id', type: Number })
   @ApiOperation({ summary: 'Delete a user (admin only)' })
   remove(@Param('id', ParseIntPipe) id: number, @CurrentUser('id') actorId: number) {

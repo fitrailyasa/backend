@@ -4,11 +4,13 @@ from rest_framework.exceptions import APIException
 class ApiError(APIException):
     status_code = 400
 
-    def __init__(self, status_code, message, errors=None):
+    def __init__(self, status_code, message, errors=None, headers=None):
         self.message = message
         self.errors = errors
         super().__init__(detail=message)
         self.status_code = status_code
+        if headers:
+            self.headers = headers
 
     @classmethod
     def bad_request(cls, message='Bad request'):
@@ -35,5 +37,9 @@ class ApiError(APIException):
         return cls(422, message, errors)
 
     @classmethod
-    def too_many(cls, message='Too many requests, please try again later'):
-        return cls(429, message)
+    def too_many(cls, message='Too many requests, please try again later', headers=None):
+        return cls(429, message, headers=headers)
+
+    @classmethod
+    def payload_too_large(cls, message='Request body too large'):
+        return cls(413, message)

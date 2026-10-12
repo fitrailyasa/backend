@@ -2,7 +2,7 @@
 
 A production-quality REST API starter built with **Node.js 24**, native **ESM**, **Express 5**, **Sequelize 6** and **MySQL 8**.
 
-It ships a complete users / catalogue / orders / comments domain with JWT authentication, role-based authorisation, server-side pagination, filtering, sorting, relational eager loading, request validation, rate limiting, an OpenAPI document and a 140 test API suite.
+It ships a complete users / catalogue / orders / comments domain with JWT authentication, role-based authorisation, server-side pagination, filtering, sorting, relational eager loading, request validation, rate limiting, login attempt lockout, an OpenAPI document and a 160 test API suite.
 
 ---
 
@@ -18,6 +18,7 @@ It ships a complete users / catalogue / orders / comments domain with JWT authen
 - [API reference](#api-reference)
 - [Query parameters](#query-parameters)
 - [Authentication](#authentication)
+- [Security](#security)
 - [Order lifecycle](#order-lifecycle)
 - [Project structure](#project-structure)
 - [Testing](#testing)
@@ -92,8 +93,10 @@ Copy `.env.example` to `.env`. Every value below has a safe default, so an empty
 | `HOST`         | `0.0.0.0`               | Bind address                                        |
 | `API_BASE_URL` | `http://localhost:3000` | Public base URL used in docs metadata               |
 | `API_PREFIX`   | `/api/v1`               | Versioned base path                                 |
-| `CORS_ORIGIN`  | `*`                     | Comma separated allow-list, or `*`                  |
-| `BODY_LIMIT`   | `1mb`                   | Maximum accepted request body                       |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | Comma separated allow-list; `*` falls back to this list |
+| `BODY_LIMIT`   | `100kb`                 | Maximum accepted request body                       |
+| `TRUST_PROXY`  | `false`                 | Trust `X-Forwarded-*`: `false` \| `true` \| hop count |
+| `ENABLE_HSTS`  | `false`                 | Send `Strict-Transport-Security` on HTTPS requests  |
 | `LOG_FORMAT`   | `dev`                   | `combined` \| `dev` \| `tiny` \| `short`            |
 | `REQUEST_ID_HEADER` | `X-Request-Id`      | Inbound header is echoed back in `X-Request-Id`     |
 
@@ -133,12 +136,19 @@ Copy `.env.example` to `.env`. Every value below has a safe default, so an empty
 
 ### Pagination and rate limiting
 
-| Variable                 | Default | Description                              |
-| ------------------------ | ------- | ---------------------------------------- |
-| `PAGINATION_LIMIT`       | `10`    | Default page size                        |
-| `PAGINATION_MAX_LIMIT`   | `100`   | Hard ceiling for `?limit`                |
-| `RATE_LIMIT_WINDOW_MS`   | `900000`| Auth rate limit window (15 minutes)      |
-| `RATE_LIMIT_MAX`         | `100`   | Auth requests per window — `0` disables  |
+| Variable                   | Default     | Description                                    |
+| -------------------------- | ----------- | ---------------------------------------------- |
+| `PAGINATION_LIMIT`         | `10`        | Default page size                              |
+| `PAGINATION_MAX_LIMIT`     | `100`       | Hard ceiling for `?limit`                      |
+| `RATE_LIMIT_ENABLED`       | `true`      | Global limiter; auto-disabled when `NODE_ENV=test` |
+| `RATE_LIMIT_WINDOW_MS`     | `60000`     | Global limiter window (60 seconds)             |
+| `RATE_LIMIT_MAX`           | `300`       | Global requests per IP per window — `0` disables |
+| `AUTH_RATE_LIMIT_WINDOW_MS`| `900000`    | Auth route limiter window (15 minutes)         |
+| `AUTH_RATE_LIMIT_MAX`      | `100`       | `/auth/*` requests per IP per window — `0` disables |
+| `LOGIN_RATE_LIMIT_MAX`     | `3`         | Failed logins per email before lockout         |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000`  | Failed login window per email (15 minutes)     |
+| `LOGIN_IP_RATE_LIMIT_MAX`  | `10`        | Failed logins per client IP before lockout     |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` | Failed login window per IP (15 minutes)       |
 
 ---
 
@@ -241,7 +251,7 @@ Two endpoints deliberately return **raw JSON** because the spec defines them tha
 | 404  | Resource does not exist                                      |
 | 409  | Duplicate unique value, or a delete blocked by a reference  |
 | 422  | Validation failed (`errors` is present)                     |
-| 429  | Rate limit exceeded                                         |
+| 429  | Rate limit exceeded, including a login lockout (`Retry-After` is set) |
 | 500  | Unexpected server error                                     |
 
 ---
@@ -404,6 +414,58 @@ Access tokens carry a unique `jti` claim. `POST /auth/logout` adds that `jti` to
 
 ---
 
+## Security
+
+### Login attempt limiter
+
+`POST /auth/login` counts **failed credential checks** (unknown email and wrong password alike) in a sliding window:
+
+| Rule                          | Default                                        |
+| ----------------------------- | ---------------------------------------------- |
+| Per normalized email          | **3 failures / 15 minutes** → lockout          |
+| Per client IP                 | **10 failures / 15 minutes** → lockout         |
+
+- The email key is trimmed and lowercased, so `Admin@X.com` cannot bypass the limit of `admin@x.com`.
+- The lock is checked **before** any password hashing or verification, and the client IP honours the `TRUST_PROXY` setting (`X-Forwarded-For` is ignored unless a proxy is configured).
+- A locked attempt returns `429` with `Retry-After` (seconds until the oldest failure expires) and the standard envelope without an `errors` key:
+
+  ```json
+  { "success": false, "message": "Too many failed login attempts. Please try again later." }
+  ```
+
+- A **successful** login clears that email's counter.
+- Wrong email and wrong password return one identical `401` message, and unknown emails still pay the cost of a bcrypt comparison against a fixed dummy hash, so neither status, message nor timing reveals whether an account exists.
+
+### IP rate limits
+
+- Global: **300 requests / 60 seconds per IP** on every route except `GET /health` and the route index `GET /api/v1` (`RATE_LIMIT_*`, automatically disabled when `NODE_ENV=test`).
+- Auth routes (`/auth/register`, `/auth/login`, `/auth/refresh`): **100 requests / 15 minutes per IP** (`AUTH_RATE_LIMIT_*`).
+- Over-limit requests return `429` with `Retry-After` and the standard envelope.
+
+> The counters live **per process** in memory. When you run multiple instances (or restart often), the limit multiplies by the instance count — scale vertically, or swap the store for Redis if you need an exact global count.
+
+### Headers and CORS
+
+Every response carries:
+
+| Header | Value |
+| ------ | ----- |
+| `X-Content-Type-Options` | `nosniff` |
+| `X-Frame-Options` | `DENY` |
+| `Referrer-Policy` | `no-referrer` |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` |
+| `Content-Security-Policy` | `default-src 'none'` (JSON API) |
+| `Strict-Transport-Security` | only when the request is HTTPS and `ENABLE_HSTS=true` (off by default) |
+
+`X-Powered-By` is removed. The Swagger UI at `/api/v1/docs` is the one HTML surface, so it relaxes the CSP to `default-src 'self'` plus the inline script/style bootstrap Swagger genuinely needs.
+
+CORS is an explicit allow-list from `CORS_ORIGINS` (default `http://localhost:3000,http://localhost:5173,http://localhost:4200`), reflects only listed origins, sends `Vary: Origin`, and caches preflight for 600 s. `*` is never combined with credentialed requests — a `*` value falls back to the dev allow-list.
+
+Request bodies are capped at **100kb** (`BODY_LIMIT`); oversized payloads return `413` with the standard envelope. `TRUST_PROXY` (default `false`) controls whether `X-Forwarded-For` is trusted — leave it off unless you sit behind a reverse proxy, otherwise client IPs (and every IP-based limit) become spoofable.
+
+---
+
 ## Order lifecycle
 
 ```text
@@ -470,9 +532,10 @@ The suite uses the built-in `node:test` runner with `supertest` — no extra tes
 | `tests/products.test.js`  | categories, products, tags, joins, filters, includes, conflicts |
 | `tests/orders.test.js`    | totals, stock, transactions, ownership, status transitions     |
 | `tests/comments.test.js`  | nested listing, CRUD, authorisation, cascade deletes           |
+| `tests/security.test.js`  | login lockout, generic 401, headers, CORS allow-list, body cap |
 | `tests/helpers.js`        | app import, schema sync, fixtures, login helper                |
 
-Current result: **140 tests, 140 passing, 0 failing** across 34 suites.
+Current result: **160 tests, 160 passing, 0 failing** across 44 suites.
 
 ---
 
@@ -485,6 +548,6 @@ Current result: **140 tests, 140 passing, 0 failing** across 34 suites.
 - [ ] Set `DB_SYNC=false` and apply `database/schema.sql` with your migration tool
 - [ ] Never set `DB_SYNC_FORCE=true`
 - [ ] Replace the seeded demo users, and rotate all demo passwords
-- [ ] Restrict `CORS_ORIGIN` to your real front-end origins
+- [ ] Restrict `CORS_ORIGINS` to your real front-end origins
 - [ ] Move the logout blacklist out of process memory (Redis) if you run multiple instances
-- [ ] Serve behind a TLS-terminating reverse proxy, then confirm the `trust proxy` hop count in `src/app.js` matches your topology
+- [ ] Serve behind a TLS-terminating reverse proxy, then set `TRUST_PROXY` to its hop count so client IPs (and the rate limits keyed on them) stay accurate

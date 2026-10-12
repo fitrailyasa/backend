@@ -26,7 +26,6 @@ func newTestServer(t *testing.T) *Server {
 		Port:             8090,
 		BaseURL:          "http://localhost:8090",
 		Prefix:           "/api/v1",
-		CORSOrigin:       "*",
 		BodyLimit:        1 << 20,
 		Dialect:          "sqlite",
 		Storage:          "file:" + name + "?mode=memory&cache=shared",
@@ -42,12 +41,21 @@ func newTestServer(t *testing.T) *Server {
 		PageLimit:        10,
 		PageMax:          100,
 		RateMax:          0,
+		// Login lockout: 3 failed attempts per email, 10 per IP, 15 minutes.
+		LoginRateMax:        3,
+		LoginRateWindowMS:   900000,
+		LoginIPRateMax:      10,
+		LoginIPRateWindowMS: 900000,
+		CORSOrigin:          config.DefaultCORSOrigins,
 	}
 	db, err := store.Open(cfg)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	return New(cfg, db)
+	srv := New(cfg, db)
+	// _SECURITY_SPEC.md 1.3: reset the limiter between cases.
+	srv.loginLimiter.Reset()
+	return srv
 }
 
 func perform(s *Server, method, path, body, token string) *httptest.ResponseRecorder {

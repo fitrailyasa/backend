@@ -56,6 +56,58 @@ python -m pytest
 
 Tests use in-memory SQLite (`config.settings.test`) and do not need MySQL.
 
+## Security
+
+Implements `_SECURITY_SPEC.md`:
+
+- **Login lockout**: `POST /api/v1/auth/login` allows **3 failed logins per normalized email
+  (trim + lowercase) per 15 minutes** and **10 failed logins per client IP per 15 minutes**. Only
+  failed credential checks count (unknown email and wrong password both count); a successful login
+  clears that email's counter. When locked the request is rejected **before** the password hash is
+  touched: `429` + `Retry-After: <seconds>` with the standard error envelope (no `errors` key) and
+  the message `Too many failed login attempts. Please try again later.` — even with the correct
+  password. The window is sliding and the store prunes expired entries.
+- **Global rate limit**: 300 requests / 60s per IP on every route except `/health` and `/api/v1`
+  (429 + `Retry-After` + standard envelope). Automatically disabled under pytest so suites never
+  flake. The older per-route limiter on register/login/refresh stays and shares `RATE_LIMIT_*`.
+- **Security headers** on every response: `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()` and
+  `Content-Security-Policy: default-src 'none'` for the JSON API. The Swagger UI at
+  `/api/v1/docs` is HTML served from this same app, so that one path relaxes the CSP to
+  `default-src 'self'` plus `'unsafe-inline'` scripts/styles and `img-src 'self' data:` that the UI
+  genuinely needs. `Strict-Transport-Security` is only sent for HTTPS requests when `ENABLE_HSTS=true`.
+- **Fingerprint**: `Server` / `X-Powered-By` style framework headers are stripped from responses.
+- **CORS**: a concrete allowlist from `CORS_ORIGINS` (default
+  `http://localhost:3000,http://localhost:5173,http://localhost:4200`), never `*` together with
+  credentials (`*` falls back to the dev allowlist), with `Vary: Origin` and a 600s preflight cache.
+- **Body cap**: request bodies over `BODY_LIMIT` (default 100kb) are rejected with `413` and the
+  standard envelope.
+- **Auth hygiene**: wrong email and wrong password return the same generic 401 message, and unknown
+  emails still run a password-hash comparison against a fixed dummy hash so timing does not reveal
+  account existence. Passwords/tokens/request bodies are never logged; unhandled 500s return a
+  sanitized message (details go to the server log only).
+- **Proxy trust**: `TRUST_PROXY=false` by default, so `X-Forwarded-For`/`X-Forwarded-Proto` are
+  ignored (spoof-proof); enable it only behind a reverse proxy — it then also sets
+  `SECURE_PROXY_SSL_HEADER` so HTTPS detection honours `X-Forwarded-Proto`.
+
+Counters are **per process** (in-memory): they do not span multiple workers/instances and reset on
+restart. Scale vertically or swap the store for Redis when running multiple instances.
+
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `RATE_LIMIT_ENABLED` | `true` (off under pytest) | Global limiter on/off |
+| `RATE_LIMIT_MAX` | `300` | Global requests per IP |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Global window |
+| `LOGIN_RATE_LIMIT_MAX` | `3` | Failed logins per email before lockout |
+| `LOGIN_RATE_LIMIT_WINDOW_MS` | `900000` | Per-email window (15 min) |
+| `LOGIN_IP_RATE_LIMIT_MAX` | `10` | Failed logins per IP before lockout |
+| `LOGIN_IP_RATE_LIMIT_WINDOW_MS` | `900000` | Per-IP window (15 min) |
+| `BODY_LIMIT` | `102400` | Max request body in bytes (0 disables) |
+| `CORS_ORIGINS` | `http://localhost:3000,http://localhost:5173,http://localhost:4200` | CORS allowlist |
+| `TRUST_PROXY` | `false` | Trust `X-Forwarded-For`/`X-Forwarded-Proto` |
+| `ENABLE_HSTS` | `false` | Send HSTS on HTTPS responses |
+
 ## Architecture
 
 ```

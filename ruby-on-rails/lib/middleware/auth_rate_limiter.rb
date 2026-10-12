@@ -15,12 +15,12 @@ module Middleware
       path = request.path.to_s.sub(%r{/+\z}, "")
       return @app.call(env) unless request.post? && PATHS.include?(path)
 
-      max = env_int("RATE_LIMIT_MAX", 100)
-      window_ms = env_int("RATE_LIMIT_WINDOW_MS", 900_000)
+      max = env_int("AUTH_RATE_LIMIT_MAX", 100)
+      window_ms = env_int("AUTH_RATE_LIMIT_WINDOW_MS", 900_000)
       return @app.call(env) if max <= 0
 
       now = (Time.now.to_f * 1000).to_i
-      key = request.ip.to_s.presence || "unknown"
+      key = ClientIp.from(env).presence || "unknown"
       count = nil
       reset_at = nil
 

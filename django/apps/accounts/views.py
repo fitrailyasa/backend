@@ -15,7 +15,7 @@ from apps.accounts.models import User
 from apps.accounts.serializers import serialize_user
 from apps.core.exceptions import ApiError
 from apps.core.permissions import IsAdmin, IsAuthenticated
-from apps.core.ratelimit import enforce_rate_limit
+from apps.core.ratelimit import client_ip, enforce_rate_limit
 from apps.core.responses import created, ok, paginated
 from apps.core.validate import parse_pk
 from apps.core.views import AdminView, AuthView, PublicView
@@ -30,7 +30,7 @@ class RegisterView(PublicView):
 class LoginView(PublicView):
     def post(self, request):
         enforce_rate_limit(request)
-        return ok('Login successful', login(request.data))
+        return ok('Login successful', login(request.data, client_ip(request)))
 
 
 class RefreshView(PublicView):

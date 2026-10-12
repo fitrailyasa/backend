@@ -1,6 +1,7 @@
 package com.backend.starter.user.controller;
 
 import com.backend.starter.common.ApiResponse;
+import com.backend.starter.security.ClientIp;
 import com.backend.starter.security.CurrentUser;
 import com.backend.starter.user.dto.UserDtos.AuthResponse;
 import com.backend.starter.user.dto.UserDtos.LoginRequest;
@@ -21,9 +22,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final ClientIp clientIp;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, ClientIp clientIp) {
         this.authService = authService;
+        this.clientIp = clientIp;
     }
 
     @PostMapping("/register")
@@ -32,8 +35,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@RequestBody LoginRequest request) {
-        return ApiResponse.ok("Login successful", authService.login(request));
+    public ApiResponse<AuthResponse> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        return ApiResponse.ok("Login successful", authService.login(request, clientIp.resolve(httpRequest)));
     }
 
     @PostMapping("/refresh")

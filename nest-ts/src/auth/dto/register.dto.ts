@@ -1,7 +1,38 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+  MinLength,
+  registerDecorator,
+  ValidationArguments,
+  ValidationOptions,
+} from 'class-validator';
 import { LowerCase, Trim } from '../../common/decorators/transform.decorator';
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../common/utils/password';
+
+/**
+ * Cross field validation: `property` must equal the value of another property
+ * on the same object (`password_confirmation` <- `password`).
+ */
+export const MatchesProperty =
+  (property: string, validationOptions?: ValidationOptions) =>
+  (object: object, propertyName: string): void => {
+    registerDecorator({
+      name: 'matchesProperty',
+      target: object.constructor,
+      propertyName,
+      options: validationOptions,
+      constraints: [property],
+      validator: {
+        validate: (value: unknown, args: ValidationArguments) =>
+          value === (args.object as Record<string, unknown>)[args.constraints[0]],
+        defaultMessage: (args: ValidationArguments) =>
+          `${args.property} must match ${args.constraints[0]}.`,
+      },
+    });
+  };
 
 export class RegisterDto {
   @ApiProperty({ example: 'Jane Doe', maxLength: 100 })
@@ -27,5 +58,6 @@ export class RegisterDto {
   @ApiProperty({ example: 'password', description: 'Has to match the password field' })
   @IsString({ message: 'password_confirmation must be a string.' })
   @IsNotEmpty({ message: 'password_confirmation is required.' })
+  @MatchesProperty('password', { message: 'password_confirmation must match password.' })
   password_confirmation!: string;
 }
